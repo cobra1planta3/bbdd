@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CONSULTA BBDD</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#eff6ff', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' }
+                    }
+                }
+            }
+        }
+    </script>
+    <script>
+        // Base de datos de registros
+        const dataset = [
+            { id: 1, CIUDAD: "MEDINA", NOMBRE: "VICTOR ARIZA MARCHANTE", DNI: "76089910E", MOTE: "Bombita", FECHA: 1990, DOMICILIO1: "C/ Sierra Blanquilla 12, 1A Medina", PLACA: "4515JZZ TMAX / 2150CZF LEON / CA7808BL GOLF", OBSERVACIONES: "Nave calle Grecia 2" },
+            { id: 2, CIUDAD: "MEDINA", NOMBRE: "JORGE MENA BENITEZ", DNI: "20073884J", MOTE: "", FECHA: 1997, DOMICILIO1: "C/ Resbala 15 Medina", PLACA: "1701CKL", OBSERVACIONES: "Peugeot 206 / Primo araña" },
+            { id: 3, CIUDAD: "MEDINA", NOMBRE: "JOSE LUIS GUTIERREZ MACIAS", DNI: "15443964Q", MOTE: "Palmera", FECHA: 1996, DOMICILIO1: "Ntra. Señora de la Paz, 9, 3A Medina", PLACA: "0467FYR W", OBSERVACIONES: "Polo / Laura Díaz Benítez" },
+            { id: 4, CIUDAD: "MEDINA", NOMBRE: "ALEJANDRO ASTORGA GAMAZA", DNI: "15441148Y", MOTE: "", FECHA: 1989, DOMICILIO1: "C/ Fenicios 19 Medina", PLACA: "7525MRR Honda Adv350 / 3531JJV BMW", OBSERVACIONES: "Nave c/ Alemania 2 / Rosa Mª García Alvarado" },
+            { id: 5, CIUDAD: "MEDINA", NOMBRE: "MANUEL MENDOZA MOTA", DNI: "52303336W", MOTE: "Lili", FECHA: 1966, DOMICILIO1: "C/ Olivo 5 Medina", PLACA: "", OBSERVACIONES: "Menudeo coca Medina" },
+            { id: 6, CIUDAD: "MEDINA", NOMBRE: "LUIS FERNANDEZ FERNANDEZ", DNI: "15444240Q", MOTE: "", FECHA: 1990, DOMICILIO1: "C/ Manuel de falla 8 Medina", PLACA: "9628DDK BMW / 7353FPN BMW 318", OBSERVACIONES: "Cuñado Bombita / Mª Carmen Ariza Marchante" },
+            { id: 7, CIUDAD: "MEDINA", NOMBRE: "CARLOS DE LA FLOR MORENO", DNI: "20073139G", MOTE: "", FECHA: 2004, DOMICILIO1: "Juan XXIII, 2, Bq 3, Esc 2, 3B Medina", PLACA: "SA7184B Seat Leon Gris", OBSERVACIONES: "Nave bombita" },
+            { id: 8, CIUDAD: "MEDINA", NOMBRE: "CRISTIAN FERNANDEZ CASTILLO", DNI: "", MOTE: "Pilita", FECHA: "", DOMICILIO1: "", PLACA: "", OBSERVACIONES: "" },
+            { id: 9, CIUDAD: "MEDINA", NOMBRE: "ALBERTO CARAVACA CASTRO", DNI: "", MOTE: "FUTBOLISTA", FECHA: 1990, DOMICILIO1: "C/ Rodan Greco 27 Medina / C/ Antártida 47, PTA 7 Medina", PLACA: "4832JCZ W Golf", OBSERVACIONES: "Minerva Salas Jiménez" },
+            { id: 10, CIUDAD: "MEDINA", NOMBRE: "JERONIMO CANTERO MACIAS", DNI: "31241315R", MOTE: "", FECHA: 1963, DOMICILIO1: "C/ Tartessos 68, bj Medina", PLACA: "", OBSERVACIONES: "Con Jonatan Rosa en barco en Algeciras" }
+        ];
+
+        let selectedRecordId = null;
+
+        function checkMainPassword() {
+            const input = document.getElementById('passwordInput');
+            if (!input) return;
+            const pass = input.value.trim();
+            if (pass === "udyco") {
+                document.getElementById('authScreen').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'flex';
+                filterData();
+            } else {
+                const err = document.getElementById('authError');
+                if (err) err.classList.remove('hidden');
+            }
+        }
+
+        function getInitials(name) {
+            if (!name) return "FP";
+            const parts = name.trim().split(" ");
+            if (parts.length >= 2) {
+                return (parts[0][0] + parts[1][0]).toUpperCase();
+            }
+            return name.substring(0, 2).toUpperCase();
+        }
+
+        // Función con ruta relativa corregida (./fotos/) para GitHub Pages
+        function getPhotoUrl(item) {
+            if (item.DNI && item.DNI.trim() !== '') {
+                return `./fotos/${item.DNI.trim().toUpperCase()}.jpg`;
+            }
+            return null;
+        }
+
+        function switchTab(tabName) {
+            const searchView = document.getElementById('view-search');
+            const detailView = document.getElementById('view-detail');
+            const tabSearch = document.getElementById('tab-search');
+            const tabDetail = document.getElementById('tab-detail');
+
+            if (tabName === 'search') {
+                searchView.classList.remove('hidden');
+                detailView.classList.add('hidden');
+                tabSearch.className = "px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg bg-blue-600 text-white transition-all flex items-center space-x-1.5 shadow cursor-pointer";
+                tabDetail.className = "px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-slate-400 hover:text-white transition-all flex items-center space-x-1.5 cursor-pointer";
+            } else {
+                if (!
