@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base de Datos Táctica - Acceso Restringido</title>
+    <style>
+        :root {
+            --bg-dark: #07090e;
+            --panel-bg: #111827;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border: #1f2937;
+            --card-bg: #0d1322;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* --- PANTALLA DE LOGIN / CONTRASEÑA --- */
+        #login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-dark);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .login-card {
+            background-color: var(--panel-bg);
+            padding: 35px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);
+            text-align: center;
+            max-width: 350px;
+            width: 100%;
+        }
+
+        .login-card h2 {
+            margin-top: 0;
+            font-size: 1.3rem;
+            letter-spacing: 1.5px;
+            color: var(--text-main);
+        }
+
+        .login-card input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            margin: 15px 0;
+            background-color: #1f2937;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: #fff;
+            box-sizing: border-box;
+            text-align: center;
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+        }
+
+        .login-card button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--accent);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .login-card button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .error-msg {
+            color: #ef4444;
+            font-size: 0.85rem;
+            margin-top: 10px;
+            display: none;
+        }
+
+        /* --- INTERFAZ PRINCIPAL TÁCTICA --- */
+        #main-app {
+            display: none; /* Oculto hasta poner la contraseña correcta */
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 15px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            letter-spacing: 2px;
+            color: #60a5fa;
+        }
+
+        /* Controles de búsqueda y filtros */
+        .controls-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            background: var(--panel-bg);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .search-group {
+            flex: 2;
+            min-width: 280px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        input[type="text"], select {
+            padding: 12px 15px;
+            background-color: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus, select:focus {
+            border-color: var(--accent);
+        }
+
+        /* Estado inicial vacío */
+        .initial-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            background: var(--panel-bg);
+            border-radius: 10px;
+            border: 1px dashed var(--border);
+        }
+
+        /* Cuadrícula de Fichas (Resultados) */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .card-img-container {
+            width: 100%;
+            height: 240px;
+            background-color: #000;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .card-img-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .card-body {
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .card-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 5px;
+        }
+
+        .card-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #93c5fd;
+            margin: 0;
+        }
+
+        .badge-city {
+            background-color: #1e3a8a;
+            color: #93c5fd;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .card-info {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .card-info strong {
+            color: var(--text-main);
+        }
+
+        .plates-section {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .plate-badge {
+            background-color: #374151;
+            color: #f9fafb;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- PANTALLA DE ACCESO -->
+    <div id="login-overlay">
+        <div class="login-card">
+            <h2>ACCESO RESTRINGIDO</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">Introduce la clave de seguridad</p>
+            <input type="password" id="pass-input" placeholder="••••••">
+            <button onclick="checkPassword()">AUTORIZAR ACCESO</button>
+            <div id="error-msg" class="error-msg">Contraseña incorrecta</div>
+        </div>
+    </div>
+
+    <!-- INTERFAZ PRINCIPAL -->
+    <div id="main-app">
+        <header>
+            <h1>SISTEMA DE CONSULTA TÁCTICA</h1>
+        </header>
+
+        <!-- PANEL DE FILTROS Y BÚSQUEDA -->
+        <div class="controls-container">
+            <div class="search-group">
+                <label for="search-input">Buscador General</label>
+                <input type="text" id="search-input" placeholder="Buscar por Nombre, DNI, Mote, Domicilio..." oninput="filterData()">
+            </div>
+            <div class="filter-group">
+                <label for="city-filter">Filtrar por Ciudad</label>
+                <select id="city-filter" onchange="filterData()">
+                    <option value="">Todas las ciudades</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- CONTENEDOR DE RESULTADOS -->
+        <div id="results-container">
+            <div class="initial-state">
+                Utiliza el buscador o selecciona una ciudad para mostrar los registros.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // CONTRASEÑA DE ACCESO
+        const PASSWORD_CORRECTA = "cobra1";
+
+        function checkPassword() {
+            const inputPass = document.getElementById('pass-input').value;
+            const errorMsg = document.getElementById('error-msg');
+
+            if (inputPass === PASSWORD_CORRECTA) {
+                document.getElementById('login-overlay').style.display = 'none';
+                document.getElementById('main-app').style.display = 'block';
+                loadGoogleSheetData(); // Carga los datos al autorizar
+            } else {
+                errorMsg.style.display = 'block';
+            }
+        }
+
+        document.getElementById('pass-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                checkPassword();
+            }
+        });
+
+        // SIMULACIÓN / CONEXIÓN DE DATOS DE GOOGLE SHEETS
+        let allData = [];
+
+        function loadGoogleSheetData() {
+            // Aquí puedes conectar tu CSV publicado de Google Sheets si lo deseas
+            // Ejemplo de estructura de prueba para verificar que la interfaz responde idéntica:
+            allData = [
+                {
+                    FOTO: "https://via.placeholder.com/300x240/111827/60a5fa?text=Ficha+1",
+                    NOMBRE: "Juan Pérez Gómez",
+                    DNI: "12345678A",
+                    CIUDAD: "Cádiz",
+                    MOTE: "El Rubio",
+                    TLF: "600111222",
+                    FECHA: "12/05/1985",
+                    DOMICILIO1: "Calle Ancha 12",
+                    PLACA1: "1234-ABC",
+                    PLACA2: "5678-XYZ",
+                    OBS: "Sin incidencias relevantes."
+                },
+                {
+                    FOTO: "https://via.placeholder.com/300x240/111827/60a5fa?text=Ficha+2",
+                    NOMBRE: "Carlos Ruiz Martín",
+                    DNI: "87654321B",
+                    CIUDAD: "Algeciras",
+                    MOTE: "Largo",
+                    TLF: "611222333",
+                    FECHA: "22/11/1990",
+                    DOMICILIO1: "Avenida España 45",
+                    PLACA1: "9988-BBB",
+                    OBS: "Control preventivo."
+                }
+            ];
+
+            populateCityFilter();
+        }
+
+        function populateCityFilter() {
+            const citySelect = document.getElementById('city-filter');
+            const cities = [...new Set(allData.map(item => item.CIUDAD).filter(Boolean))];
+            
+            cities.sort().forEach(city => {
+                const option = document.createElement('option');
+                option.value = city;
+                option.textContent = city;
+                citySelect.appendChild(option);
+            });
+        }
+
+        function filterData() {
+            const textQuery = document.getElementById('search-input').value.toLowerCase().trim();
+            const cityQuery = document.getElementById('city-filter').value;
+            const container = document.getElementById('results-container');
+
+            // Si ambos filtros están vacíos, mostrar estado inicial
+            if (!textQuery && !cityQuery) {
+                container.innerHTML = `
+                    <div class="initial-state">
+                        Utiliza el buscador o selecciona una ciudad para mostrar los registros.
+                    </div>
+                `;
+                return;
+            }
+
+            const filtered = allData.filter(item => {
+                const matchCity = !cityQuery || item.CIUDAD === cityQuery;
+                const matchText = !textQuery || 
+                    (item.NOMBRE && item.NOMBRE.toLowerCase().includes(textQuery)) ||
+                    (item.DNI && item.DNI.toLowerCase().includes(textQuery)) ||
+                    (item.MOTE && item.MOTE.toLowerCase().includes(textQuery)) ||
+                    (item.DOMICILIO1 && item.DOMICILIO1.toLowerCase().includes(textQuery)) ||
+                    (item.PLACA1 && item.PLACA1.toLowerCase().includes(textQuery)) ||
+                    (item.PLACA2 && item.PLACA2.toLowerCase().includes(textQuery));
+
+                return matchCity && matchText;
+            });
+
+            renderCards(filtered);
+        }
+
+        function renderCards(data) {
+            const container = document.getElementById('results-container');
+            
+            if (data.length === 0) {
+                container.innerHTML = `
+                    <div class="initial-state">
+                        No se han encontrado registros con los criterios de búsqueda especificados.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '<div class="results-grid" id="grid"></div>';
+            const grid = document.getElementById('grid');
+
+            data.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                
+                // Recopilar placas disponibles
+                let platesHTML = '';
+                ['PLACA1', 'PLACA2', 'PLACA3', 'PLACA4'].forEach(pKey => {
+                    if (item[pKey]) {
+                        platesHTML += `<span class="plate-badge">${item[pKey]}</span>`;
+                    }
+                });
+
+                card.innerHTML = `
+                    <div class="card-img-container">
+                        <img src="${item.FOTO || 'https://via.placeholder.com/300x240?text=Sin+Imagen'}" alt="Foto Ficha">
+                    </div>
+                    <div class="card-body">
+                        <div class="card-header-row">
+                            <h3 class="card-name">${item.NOMBRE || 'Sin Nombre'}</h3>
+                            <span class="badge-city">${item.CIUDAD || 'N/D'}</span>
+                        </div>
+                        <div class="card-info"><strong>DNI:</strong> ${item.DNI || 'N/A'}</div>
+                        <div class="card-info"><strong>Mote:</strong> ${item.MOTE || 'N/A'}</div>
+                        <div class="card-info"><strong>Teléfono:</strong> ${item.TLF || 'N/A'}</div>
+                        <div class="card-info"><strong>Domicilio:</strong> ${item.DOMICILIO1 || 'N/A'}</div>
+                        ${platesHTML ? `<div class="plates-section">${platesHTML}</div>` : ''}
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>
