@@ -1,0 +1,32 @@
+<!-- Script de Carga y Funcionalidad -->
+    <script>
+        let dataset = [];
+        let selectedRecordId = null;
+
+        // Cargar datos automáticamente desde el archivo data.json al iniciar
+        async function loadDatabase() {
+            try {
+                const response = await fetch('data.json?t=' + new Date().getTime()); // Evita caché de GitHub
+                if (!response.ok) throw new Error("No se pudo cargar el archivo data.json");
+                dataset = await response.json();
+
+                // Actualizar indicador de conexión a Verde y contador total real
+                document.getElementById('totalDbCount').innerText = dataset.length;
+                document.getElementById('dbStatusDot').className = "w-3 h-3 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50 animate-pulse";
+                document.getElementById('dbStatusText').innerText = "BBDD Conectada";
+                document.getElementById('resultCount').innerText = `Base de datos sincronizada correctamente (${dataset.length} registros)`;
+                
+                // Refrescar filtro si ya hay algo escrito
+                filterData();
+            } catch (error) {
+                console.error(error);
+                document.getElementById('dbStatusDot').className = "w-3 h-3 rounded-full bg-red-500 shadow-lg";
+                document.getElementById('dbStatusText').innerText = "Error BBDD";
+                document.getElementById('resultCount').innerText = "Error al conectar con data.json";
+            }
+        }
+
+        // Llamar a la carga al abrir la página
+        window.addEventListener('DOMContentLoaded', loadDatabase);
+        
+        // ... (resto de tus funciones de filtrado y renderizado)
