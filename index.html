@@ -127,6 +127,27 @@
             }
         }
 
+        // Función inteligente para detectar coordenadas y convertirlas en enlace a Google Maps
+        function formatAddress(addressText, query) {
+            if (!addressText) return '<span class="text-slate-500 italic">Sin domicilio</span>';
+            
+            // Expresión regular para detectar coordenadas (ej: 36.1408, -5.3536 o similar)
+            const coordRegex = /(-?\d{1,2}\.\d+),\s*(-?\s*\d{1,3}\.\d+)/g;
+            
+            if (coordRegex.test(addressText)) {
+                // Si contiene coordenadas, creamos enlace directo a maps
+                const formatted = addressText.replace(coordRegex, (match, lat, lon) => {
+                    const cleanLat = lat.trim();
+                    const cleanLon = lon.trim();
+                    return `<a href="https://www.google.com/maps/search/?api=1&query=${cleanLat},${cleanLon}" target="_blank" class="text-blue-400 hover:underline inline-flex items-center space-x-1 font-mono font-bold bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20" onclick="event.stopPropagation();"><span>📍</span><span>${match}</span></a>`;
+                });
+                return formatted;
+            }
+            
+            // Si es dirección normal, aplicamos el resaltado de búsqueda
+            return highlightText(addressText, query);
+        }
+
         function switchTab(tabName) {
             const searchView = document.getElementById('view-search');
             const detailView = document.getElementById('view-detail');
@@ -187,7 +208,6 @@
                 return;
             }
 
-            // Cuadrícula optimizada: grid-cols-2 en móvil (para mostrar 4+ fichas compactas de un vistazo) y lg:grid-cols-4 en PC
             grid.innerHTML = paginatedItems.map(item => {
                 const initials = getInitials(item.NOMBRE);
                 const plates = [];
@@ -202,7 +222,7 @@
                 const highlightedDni = highlightText(item.DNI || '-', query);
                 const highlightedMote = highlightText(item.MOTE || 'Ninguno', query);
                 const highlightedFecha = highlightText(item.FECHA || '-', query);
-                const highlightedDomicilio = highlightText(item.DOMICILIO1 || 'Sin domicilio', query);
+                const formattedDomicilio = formatAddress(item.DOMICILIO1, query);
 
                 return `
                     <div class="bg-slate-900 border border-slate-800 hover:border-blue-500/50 rounded-2xl p-2.5 sm:p-4 shadow-xl flex flex-col justify-between group transition-all space-y-2.5">
@@ -235,7 +255,7 @@
                                 </div>
                                 <div class="bg-slate-950/80 p-1.5 sm:p-2 rounded-lg border border-slate-800/80 space-y-0.5">
                                     <span class="text-slate-400 block text-[10px]">DOMICILIO:</span>
-                                    <span class="text-slate-200 block truncate">${highlightedDomicilio}</span>
+                                    <div class="text-slate-200 truncate">${formattedDomicilio}</div>
                                 </div>
                                 <div class="bg-slate-950/80 p-1.5 sm:p-2 rounded-lg border border-slate-800/80 space-y-1">
                                     <span class="text-slate-400 block text-[10px]">VEHÍCULOS:</span>
@@ -351,10 +371,10 @@
                         <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">DOMICILIOS:</span>
                         <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800/80 text-sm flex items-center space-x-2 text-slate-200">
                             <span>📍</span>
-                            <span>${item.DOMICILIO1 || 'No registrado'}</span>
+                            <span>${formatAddress(item.DOMICILIO1, '')}</span>
                         </div>
-                        ${item.DOMICILIO2 ? `<div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800/80 text-sm flex items-center space-x-2 text-slate-200"><span>📍</span><span>${item.DOMICILIO2}</span></div>` : ''}
-                        ${item.DOMICILIO3 ? `<div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800/80 text-sm flex items-center space-x-2 text-slate-200"><span>📍</span><span>${item.DOMICILIO3}</span></div>` : ''}
+                        ${item.DOMICILIO2 ? `<div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800/80 text-sm flex items-center space-x-2 text-slate-200"><span>📍</span><span>${formatAddress(item.DOMICILIO2, '')}</span></div>` : ''}
+                        ${item.DOMICILIO3 ? `<div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800/80 text-sm flex items-center space-x-2 text-slate-200"><span>📍</span><span>${formatAddress(item.DOMICILIO3, '')}</span></div>` : ''}
                     </div>
 
                     <div class="space-y-2 pt-2">
@@ -463,7 +483,7 @@
                 <!-- Paginación superior -->
                 <div id="paginationTop"></div>
 
-                <!-- Cuadrícula adaptada a móviles (grid-cols-2) y ordenadores (lg:grid-cols-4) -->
+                <!-- Cuadrícula optimizada -->
                 <div id="resultsGrid" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4"></div>
                 
                 <!-- Paginación inferior -->
