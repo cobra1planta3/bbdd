@@ -22,6 +22,8 @@
     <script>
         let allData = [];
         let selectedRecordId = null;
+        let currentPage = 1;
+        const itemsPerPage = 24; // Múltiplo de 4 para encajar perfectamente en rejillas de 4 columnas
 
         function verificarClave() {
             const input = document.getElementById('passwordInput');
@@ -119,11 +121,14 @@
             }
         }
 
-        function filterData() {
+        function filterData(resetPage = true) {
+            if (resetPage) currentPage = 1;
+
             const queryInput = document.getElementById('searchInput');
             const cityFilter = document.getElementById('cityFilter');
             const grid = document.getElementById('resultsGrid');
             const resultCount = document.getElementById('resultCount');
+            const paginationContainer = document.getElementById('paginationContainer');
 
             if (!queryInput || !grid) return;
 
@@ -133,6 +138,7 @@
             if (query === '' && !selectedCity) {
                 grid.innerHTML = `<div class="col-span-full py-12 sm:py-16 text-center text-slate-400 bg-slate-900 rounded-2xl border border-slate-800 text-sm px-4">Utiliza el buscador o selecciona una localidad para ver registros.</div>`;
                 resultCount.innerText = "Esperando búsqueda...";
+                if (paginationContainer) paginationContainer.innerHTML = '';
                 return;
             }
 
@@ -142,21 +148,23 @@
                 return Object.values(item).some(val => String(val).toLowerCase().includes(query));
             });
 
-            const maxDisplayLimit = 40;
-            const limitedFiltered = filtered.slice(0, maxDisplayLimit);
+            const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
 
-            if (filtered.length > maxDisplayLimit) {
-                resultCount.innerText = `Mostrando ${maxDisplayLimit} de ${filtered.length} coincidentes`;
-            } else {
-                resultCount.innerText = `Mostrados ${filtered.length} registros`;
-            }
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const paginatedItems = filtered.slice(startIndex, endIndex);
+
+            resultCount.innerText = `Mostrando registros del ${filtered.length > 0 ? startIndex + 1 : 0} al ${Math.min(endIndex, filtered.length)} de ${filtered.length} coincidentes`;
 
             if (filtered.length === 0) {
                 grid.innerHTML = `<div class="col-span-full py-12 sm:py-16 text-center text-slate-400 bg-slate-900 rounded-2xl border border-slate-800 text-sm px-4">No se encontraron registros coincidentes.</div>`;
+                if (paginationContainer) paginationContainer.innerHTML = '';
                 return;
             }
 
-            grid.innerHTML = limitedFiltered.map(item => {
+            // Cuadrícula ajustada a lg:grid-cols-4 para mostrar 4 fichas en paralelo por fila
+            grid.innerHTML = paginatedItems.map(item => {
                 const initials = getInitials(item.NOMBRE);
                 const plates = [];
                 if (item.PLACA1) plates.push(item.PLACA1);
@@ -167,44 +175,43 @@
                 const photoUrl = getPhotoUrl(item);
 
                 return `
-                    <div class="bg-slate-900 border border-slate-800 hover:border-blue-500/50 rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col justify-between group transition-all space-y-3">
+                    <div class="bg-slate-900 border border-slate-800 hover:border-blue-500/50 rounded-2xl p-3.5 sm:p-4 shadow-xl flex flex-col justify-between group transition-all space-y-3">
                         <div class="cursor-pointer space-y-3" onclick="selectRecord(${item.id})">
-                            <div class="flex items-center space-x-3.5 pb-3.5 border-b border-slate-800">
-                                <!-- Contenedor de foto ampliado en tarjeta -->
-                                <div class="w-32 h-36 sm:w-36 sm:h-40 bg-slate-950 border-2 border-slate-700/80 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-inner flex-shrink-0 overflow-hidden group-hover:border-blue-500/80 transition-colors relative">
-                                    <span class="text-blue-400 font-extrabold text-2xl sm:text-3xl tracking-wider">${initials}</span>
+                            <div class="flex items-center space-x-3 pb-3 border-b border-slate-800">
+                                <div class="w-24 h-28 sm:w-28 sm:h-32 bg-slate-950 border-2 border-slate-700/80 rounded-xl flex items-center justify-center shadow-inner flex-shrink-0 overflow-hidden group-hover:border-blue-500/80 transition-colors relative">
+                                    <span class="text-blue-400 font-extrabold text-xl sm:text-2xl tracking-wider">${initials}</span>
                                     ${photoUrl ? `<img src="${photoUrl}" alt="${item.NOMBRE}" class="absolute inset-0 w-full h-full object-cover object-top rounded-xl z-10" onerror="handleImageError(this, '${item.DNI}');">` : ''}
                                 </div>
                                 <div class="min-w-0 flex-1 space-y-1">
-                                    <span class="px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-md text-[9px] sm:text-[10px] font-bold uppercase tracking-wider border border-blue-500/20 inline-block">
+                                    <span class="px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-md text-[9px] font-bold uppercase tracking-wider border border-blue-500/20 inline-block">
                                         ${item.CIUDAD || 'LOCALIDAD'}
                                     </span>
-                                    <h3 class="text-sm sm:text-lg font-bold text-white group-hover:text-blue-400 transition-colors leading-tight line-clamp-2">${item.NOMBRE || 'SIN NOMBRE'}</h3>
+                                    <h3 class="text-xs sm:text-sm font-bold text-white group-hover:text-blue-400 transition-colors leading-tight line-clamp-2">${item.NOMBRE || 'SIN NOMBRE'}</h3>
                                 </div>
                             </div>
 
                             <div class="space-y-1.5 text-xs">
-                                <div class="bg-slate-950/80 p-2 sm:p-2.5 rounded-xl border border-slate-800/80 flex justify-between items-center">
+                                <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800/80 flex justify-between items-center">
                                     <span class="text-slate-400">DNI:</span>
                                     <span class="text-slate-100 font-mono font-semibold">${item.DNI || '-'}</span>
                                 </div>
-                                <div class="bg-slate-950/80 p-2 sm:p-2.5 rounded-xl border border-slate-800/80 flex justify-between items-center">
+                                <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800/80 flex justify-between items-center">
                                     <span class="text-slate-400">ALIAS:</span>
-                                    <span class="text-amber-400 font-semibold truncate max-w-[150px]">${item.MOTE || 'Ninguno'}</span>
+                                    <span class="text-amber-400 font-semibold truncate max-w-[120px]">${item.MOTE || 'Ninguno'}</span>
                                 </div>
-                                <div class="bg-slate-950/80 p-2 sm:p-2.5 rounded-xl border border-slate-800/80 flex justify-between items-center">
+                                <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800/80 flex justify-between items-center">
                                     <span class="text-slate-400">AÑO:</span>
                                     <span class="text-slate-100 font-mono">${item.FECHA || '-'}</span>
                                 </div>
-                                <div class="bg-slate-950/80 p-2 sm:p-2.5 rounded-xl border border-slate-800/80 space-y-0.5">
+                                <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800/80 space-y-0.5">
                                     <span class="text-slate-400 block text-[11px]">DOMICILIO:</span>
                                     <span class="text-slate-200 block truncate">${item.DOMICILIO1 || 'Sin domicilio'}</span>
                                 </div>
-                                <div class="bg-slate-950/80 p-2 sm:p-2.5 rounded-xl border border-slate-800/80 space-y-1">
+                                <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800/80 space-y-1">
                                     <span class="text-slate-400 block text-[11px]">VEHÍCULOS:</span>
                                     <div class="flex flex-wrap gap-1">
                                         ${plates.length > 0 ? plates.map(p => `
-                                            <span class="bg-slate-900 px-2 py-0.5 rounded-lg border border-slate-700 text-[10px] font-mono text-blue-300 flex items-center space-x-1">
+                                            <span class="bg-slate-900 px-1.5 py-0.5 rounded-lg border border-slate-700 text-[9px] font-mono text-blue-300 flex items-center space-x-1">
                                                 <span>🚗</span>
                                                 <span>${p}</span>
                                             </span>
@@ -212,7 +219,7 @@
                                     </div>
                                 </div>
                                 ${item.OBSERVACIONES ? `
-                                    <div class="bg-slate-950/80 p-2 sm:p-2.5 rounded-xl border border-slate-800/80 space-y-0.5">
+                                    <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800/80 space-y-0.5">
                                         <span class="text-slate-400 block text-[11px]">OBSERVACIONES:</span>
                                         <span class="text-slate-300 block line-clamp-2">${item.OBSERVACIONES}</span>
                                     </div>
@@ -220,7 +227,7 @@
                             </div>
                         </div>
 
-                        <div class="pt-2.5 flex items-center justify-end border-t border-slate-800">
+                        <div class="pt-2 flex items-center justify-end border-t border-slate-800">
                             <button type="button" onclick="selectRecord(${item.id})" class="text-xs text-blue-400 font-medium hover:underline flex items-center space-x-1 cursor-pointer py-1">
                                 <span>Ver desglose completo →</span>
                             </button>
@@ -228,12 +235,44 @@
                     </div>
                 `;
             }).join('');
+
+            renderPagination(totalPages);
+        }
+
+        function renderPagination(totalPages) {
+            const container = document.getElementById('paginationContainer');
+            if (!container) return;
+
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="flex items-center justify-center space-x-3 py-6">
+                    <button type="button" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled class="px-4 py-2 bg-slate-900 text-slate-600 border border-slate-800 rounded-xl cursor-not-allowed text-sm font-medium"' : 'class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl cursor-pointer text-sm font-medium transition-colors"'}>
+                        ← Anterior
+                    </button>
+                    <span class="text-xs sm:text-sm text-slate-300 font-mono px-3">
+                        Página <strong class="text-blue-400">${currentPage}</strong> de <strong class="text-slate-100">${totalPages}</strong>
+                    </span>
+                    <button type="button" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled class="px-4 py-2 bg-slate-900 text-slate-600 border border-slate-800 rounded-xl cursor-not-allowed text-sm font-medium"' : 'class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl cursor-pointer text-sm font-medium transition-colors"'}>
+                        Siguiente →
+                    </button>
+                </div>
+            `;
+        }
+
+        function changePage(targetPage) {
+            currentPage = targetPage;
+            filterData(false);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function resetFilters() {
             document.getElementById('searchInput').value = '';
             document.getElementById('cityFilter').value = '';
-            filterData();
+            filterData(true);
         }
 
         function selectRecord(id) {
@@ -258,7 +297,6 @@
             container.innerHTML = `
                 <div class="bg-slate-900 rounded-2xl border border-slate-800 p-4 sm:p-8 shadow-2xl space-y-5">
                     <div class="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-5 pb-5 border-b border-slate-800 text-center sm:text-left">
-                        <!-- Contenedor de foto ampliado en la vista de detalle -->
                         <div class="w-40 h-48 sm:w-44 sm:h-52 bg-slate-950 border-2 border-slate-700 rounded-2xl flex items-center justify-center shadow-inner flex-shrink-0 overflow-hidden relative">
                             <span class="text-blue-400 font-black text-4xl tracking-wider">${initials}</span>
                             ${photoUrl ? `<img src="${photoUrl}" alt="${item.NOMBRE}" class="absolute inset-0 w-full h-full object-cover object-top rounded-2xl z-10" onerror="handleImageError(this, '${item.DNI}');">` : ''}
@@ -400,7 +438,11 @@
                     </div>
                 </div>
 
-                <div id="resultsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6"></div>
+                <!-- Cuadrícula actualizada a 4 columnas en pantallas grandes (lg:grid-cols-4) -->
+                <div id="resultsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4"></div>
+                
+                <!-- Contenedor de paginación -->
+                <div id="paginationContainer"></div>
             </div>
 
             <div id="view-detail" class="hidden space-y-4 sm:space-y-6 max-w-2xl mx-auto">
