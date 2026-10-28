@@ -204,7 +204,6 @@
                 return;
             }
 
-            // Fichas ultra-compactas en móvil (grid-cols-2) para ver 4+ fichas de un vistazo sin scroll excesivo
             grid.innerHTML = paginatedItems.map(item => {
                 const initials = getInitials(item.NOMBRE);
                 const plates = [];
@@ -302,9 +301,16 @@
             if (bottomContainer) bottomContainer.innerHTML = paginationHtml;
         }
 
+        // Cambio de página optimizado para forzar el scroll al inicio del contenedor principal
         function changePage(targetPage) {
             currentPage = targetPage;
             filterData(false);
+
+            // Resetea el scroll del contenedor principal y del window
+            const mainContainer = document.querySelector('main');
+            if (mainContainer) {
+                mainContainer.scrollTo({ top: 0, behavior: 'smooth' });
+            }
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -480,7 +486,7 @@
                 <!-- Paginación superior -->
                 <div id="paginationTop"></div>
 
-                <!-- Cuadrícula optimizada para mostrar más fichas compactas en móvil -->
+                <!-- Cuadrícula -->
                 <div id="resultsGrid" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4"></div>
                 
                 <!-- Paginación inferior -->
