@@ -124,10 +124,10 @@
             const authError = document.getElementById('authError');
             
             if (!input) return;
-            // Ignora mayúsculas accidentales al introducir la clave
             const pass = input.value.trim().toLowerCase();
 
             if (pass === "udyco") {
+                if (authError) authError.classList.add('hidden');
                 input.blur();
                 document.getElementById('authScreen').style.display = 'none';
                 document.getElementById('mainApp').style.display = 'flex';
@@ -181,7 +181,6 @@
 
         function getPhotoUrl(item) {
             if (item.DNI && item.DNI.trim() !== '') {
-                // Carpeta fotos en minúsculas y DNI normalizado a minúsculas
                 const cleanDni = item.DNI.trim().replace(/\s+/g, '').toLowerCase();
                 return `fotos/${cleanDni}.jpg`;
             }
