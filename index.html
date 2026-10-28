@@ -18,12 +18,22 @@
             }
         }
     </script>
+    <!-- Estilo para sombrear las coincidencias del buscador -->
+    <style>
+        mark {
+            background-color: #facc15;
+            color: #020617;
+            padding: 0 2px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+    </style>
     <!-- Script principal cargado en el head -->
     <script>
         let allData = [];
         let selectedRecordId = null;
         let currentPage = 1;
-        const itemsPerPage = 24;
+        const itemsPerPage = 40; // Ajustado a 40 registros por página
 
         function verificarClave() {
             const input = document.getElementById('passwordInput');
@@ -88,9 +98,33 @@
         function getPhotoUrl(item) {
             if (item.DNI && item.DNI.trim() !== '') {
                 const cleanDni = item.DNI.trim().replace(/\s+/g, '');
-                return `fotos/${cleanDni}.jpg`; } return null; }  // Control estricto de errores sin bucles de peticiones function handleImageError(imgElement, dni) { if (!imgElement.dataset.retried) { imgElement.dataset.retried = "true"; const cleanDni = dni.trim().replace(/\s+/g, ''); // Un solo intento controlado pasando a minúsculas imgElement.src = `fotos/${cleanDni.toLowerCase()}.jpg`;
+                return `fotos/${cleanDni}.jpg`;
+            }
+            return null;
+        }
+
+        function handleImageError(imgElement, dni) {
+            if (!imgElement.dataset.retried) {
+                imgElement.dataset.retried = "true";
+                const cleanDni = dni.trim().replace(/\s+/g, '');
+                imgElement.src = `fotos/${cleanDni.toLowerCase()}.jpg`;
             } else {
                 imgElement.remove();
+            }
+        }
+
+        // Función para resaltar el texto buscado en los resultados
+        function highlightText(text, query) {
+            if (!text) return '-';
+            const strText = String(text);
+            if (!query || query.trim() === '') return strText;
+            
+            try {
+                const escapedQuery = query.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                const regex = new RegExp(`(${escapedQuery})`, 'gi');
+                return strText.replace(regex, '<mark>$1</mark>');
+            } catch (e) {
+                return strText;
             }
         }
 
@@ -116,7 +150,8 @@
             const cityFilter = document.getElementById('cityFilter');
             const grid = document.getElementById('resultsGrid');
             const resultCount = document.getElementById('resultCount');
-            const paginationContainer = document.getElementById('paginationContainer');
+            const paginationTop = document.getElementById('paginationTop');
+            const paginationBottom = document.getElementById('paginationBottom');
 
             if (!queryInput || !grid) return;
 
@@ -126,7 +161,8 @@
             if (query === '' && !selectedCity) {
                 grid.innerHTML = `<div class="col-span-full py-12 sm:py-16 text-center text-slate-400 bg-slate-900 rounded-2xl border border-slate-800 text-sm px-4">Utiliza el buscador o selecciona una localidad para ver registros.</div>`;
                 resultCount.innerText = "Esperando búsqueda...";
-                if (paginationContainer) paginationContainer.innerHTML = '';
+                if (paginationTop) paginationTop.innerHTML = '';
+                if (paginationBottom) paginationBottom.innerHTML = '';
                 return;
             }
 
@@ -143,11 +179,12 @@
             const endIndex = startIndex + itemsPerPage;
             const paginatedItems = filtered.slice(startIndex, endIndex);
 
-            resultCount.innerText = `Mostrando registros del ${filtered.length > 0 ? startIndex + 1 : 0} al ${Math.min(endIndex, filtered.length)} de${filtered.length} coincidentes`;
+            resultCount.innerText = `Mostrando registros del ${filtered.length > 0 ? startIndex + 1 : 0} al ${Math.min(endIndex, filtered.length)} de ${filtered.length} coincidentes`;
 
             if (filtered.length === 0) {
                 grid.innerHTML = `<div class="col-span-full py-12 sm:py-16 text-center text-slate-400 bg-slate-900 rounded-2xl border border-slate-800 text-sm px-4">No se encontraron registros coincidentes.</div>`;
-                if (paginationContainer) paginationContainer.innerHTML = '';
+                if (paginationTop) paginationTop.innerHTML = '';
+                if (paginationBottom) paginationBottom.innerHTML = '';
                 return;
             }
 
@@ -161,37 +198,45 @@
 
                 const photoUrl = getPhotoUrl(item);
 
+                const highlightedName = highlightText(item.NOMBRE || 'SIN NOMBRE', query);
+                const highlightedDni = highlightText(item.DNI || '-', query);
+                const highlightedMote = highlightText(item.MOTE || 'Ninguno', query);
+                const highlightedFecha = highlightText(item.FECHA || '-', query);
+                const highlightedDomicilio = highlightText(item.DOMICILIO1 || 'Sin domicilio', query);
+                const highlightedObs = item.OBSERVACIONES ? highlightText(item.OBSERVACIONES, query) : '';
+
                 return `
                     <div class="bg-slate-900 border border-slate-800 hover:border-blue-500/50 rounded-2xl p-3.5 sm:p-4 shadow-xl flex flex-col justify-between group transition-all space-y-3">
                         <div class="cursor-pointer space-y-3" onclick="selectRecord(${item.id})">
                             <div class="flex items-center space-x-3 pb-3 border-b border-slate-800">
                                 <div class="w-24 h-28 sm:w-28 sm:h-32 bg-slate-950 border-2 border-slate-700/80 rounded-xl flex items-center justify-center shadow-inner flex-shrink-0 overflow-hidden group-hover:border-blue-500/80 transition-colors relative">
-                                    <span class="text-blue-400 font-extrabold text-xl sm:text-2xl tracking-wider">${initials}</span>${photoUrl ? `<img src="${photoUrl}" alt="${item.NOMBRE}" class="absolute inset-0 w-full h-full object-cover object-top rounded-xl z-10" onerror="handleImageError(this, '${item.DNI}');">` : ''}
+                                    <span class="text-blue-400 font-extrabold text-xl sm:text-2xl tracking-wider">${initials}</span>
+                                    ${photoUrl ? `<img src="${photoUrl}" alt="${item.NOMBRE}" class="absolute inset-0 w-full h-full object-cover object-top rounded-xl z-10" onerror="handleImageError(this, '${item.DNI}');">` : ''}
                                 </div>
                                 <div class="min-w-0 flex-1 space-y-1">
-                                    <span class="px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-md text-[9px] font-bold uppercase tracking-wider border border-blue-500/20 inline-block">
+                                    <span class="px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-md text-[9px] sm:text-[10px] font-bold uppercase tracking-wider border border-blue-500/20 inline-block">
                                         ${item.CIUDAD || 'LOCALIDAD'}
                                     </span>
-                                    <h3 class="text-xs sm:text-sm font-bold text-white group-hover:text-blue-400 transition-colors leading-tight line-clamp-2">${item.NOMBRE || 'SIN NOMBRE'}</h3>
+                                    <h3 class="text-xs sm:text-sm font-bold text-white group-hover:text-blue-400 transition-colors leading-tight line-clamp-2">${highlightedName}</h3>
                                 </div>
                             </div>
 
                             <div class="space-y-1.5 text-xs">
                                 <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800/80 flex justify-between items-center">
                                     <span class="text-slate-400">DNI:</span>
-                                    <span class="text-slate-100 font-mono font-semibold">${item.DNI || '-'}</span>
+                                    <span class="text-slate-100 font-mono font-semibold">${highlightedDni}</span>
                                 </div>
                                 <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800/80 flex justify-between items-center">
                                     <span class="text-slate-400">ALIAS:</span>
-                                    <span class="text-amber-400 font-semibold truncate max-w-[120px]">${item.MOTE || 'Ninguno'}</span>
+                                    <span class="text-amber-400 font-semibold truncate max-w-[120px]">${highlightedMote}</span>
                                 </div>
                                 <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800/80 flex justify-between items-center">
                                     <span class="text-slate-400">AÑO:</span>
-                                    <span class="text-slate-100 font-mono">${item.FECHA || '-'}</span>
+                                    <span class="text-slate-100 font-mono">${highlightedFecha}</span>
                                 </div>
                                 <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800/80 space-y-0.5">
                                     <span class="text-slate-400 block text-[11px]">DOMICILIO:</span>
-                                    <span class="text-slate-200 block truncate">${item.DOMICILIO1 || 'Sin domicilio'}</span>
+                                    <span class="text-slate-200 block truncate">${highlightedDomicilio}</span>
                                 </div>
                                 <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800/80 space-y-1">
                                     <span class="text-slate-400 block text-[11px]">VEHÍCULOS:</span>
@@ -199,7 +244,7 @@
                                         ${plates.length > 0 ? plates.map(p => `
                                             <span class="bg-slate-900 px-1.5 py-0.5 rounded-lg border border-slate-700 text-[9px] font-mono text-blue-300 flex items-center space-x-1">
                                                 <span>🚗</span>
-                                                <span>${p}</span>
+                                                <span>${highlightText(p, query)}</span>
                                             </span>
                                         `).join('') : '<span class="text-slate-500 italic text-[11px]">Ninguno</span>'}
                                     </div>
@@ -207,7 +252,7 @@
                                 ${item.OBSERVACIONES ? `
                                     <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800/80 space-y-0.5">
                                         <span class="text-slate-400 block text-[11px]">OBSERVACIONES:</span>
-                                        <span class="text-slate-300 block line-clamp-2">${item.OBSERVACIONES}</span>
+                                        <span class="text-slate-300 block line-clamp-2">${highlightedObs}</span>
                                     </div>
                                 ` : ''}
                             </div>
@@ -226,16 +271,8 @@
         }
 
         function renderPagination(totalPages) {
-            const container = document.getElementById('paginationContainer');
-            if (!container) return;
-
-            if (totalPages <= 1) {
-                container.innerHTML = '';
-                return;
-            }
-
-            container.innerHTML = `
-                <div class="flex items-center justify-center space-x-3 py-6">
+            const paginationHtml = totalPages <= 1 ? '' : `
+                <div class="flex items-center justify-center space-x-3 py-4 bg-slate-900/50 rounded-2xl border border-slate-800 my-4">
                     <button type="button" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled class="px-4 py-2 bg-slate-900 text-slate-600 border border-slate-800 rounded-xl cursor-not-allowed text-sm font-medium"' : 'class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl cursor-pointer text-sm font-medium transition-colors"'}>
                         ← Anterior
                     </button>
@@ -247,6 +284,12 @@
                     </button>
                 </div>
             `;
+
+            const topContainer = document.getElementById('paginationTop');
+            const bottomContainer = document.getElementById('paginationBottom');
+            
+            if (topContainer) topContainer.innerHTML = paginationHtml;
+            if (bottomContainer) bottomContainer.innerHTML = paginationHtml;
         }
 
         function changePage(targetPage) {
@@ -284,7 +327,8 @@
                 <div class="bg-slate-900 rounded-2xl border border-slate-800 p-4 sm:p-8 shadow-2xl space-y-5">
                     <div class="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-5 pb-5 border-b border-slate-800 text-center sm:text-left">
                         <div class="w-40 h-48 sm:w-44 sm:h-52 bg-slate-950 border-2 border-slate-700 rounded-2xl flex items-center justify-center shadow-inner flex-shrink-0 overflow-hidden relative">
-                            <span class="text-blue-400 font-black text-4xl tracking-wider">${initials}</span>${photoUrl ? `<img src="${photoUrl}" alt="${item.NOMBRE}" class="absolute inset-0 w-full h-full object-cover object-top rounded-2xl z-10" onerror="handleImageError(this, '${item.DNI}');">` : ''}
+                            <span class="text-blue-400 font-black text-4xl tracking-wider">${initials}</span>
+                            ${photoUrl ? `<img src="${photoUrl}" alt="${item.NOMBRE}" class="absolute inset-0 w-full h-full object-cover object-top rounded-2xl z-10" onerror="handleImageError(this, '${item.DNI}');">` : ''}
                         </div>
                         <div class="space-y-2">
                             <span class="px-2.5 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold uppercase tracking-wider inline-block">
@@ -305,4 +349,142 @@
                             <span class="text-amber-400 font-bold">${item.MOTE || 'Ninguno'}</span>
                         </div>
                         <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800/80 flex items-center justify-between">
-                            <span class="text-slate-400">
+                            <span class="text-slate-400">AÑO:</span>
+                            <span class="text-slate-100 font-mono">${item.FECHA || 'No especificado'}</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2 pt-2">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">DOMICILIOS:</span>
+                        <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800/80 text-sm flex items-center space-x-2 text-slate-200">
+                            <span>📍</span>
+                            <span>${item.DOMICILIO1 || 'No registrado'}</span>
+                        </div>
+                        ${item.DOMICILIO2 ? `<div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800/80 text-sm flex items-center space-x-2 text-slate-200"><span>📍</span><span>${item.DOMICILIO2}</span></div>` : ''}
+                        ${item.DOMICILIO3 ? `<div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800/80 text-sm flex items-center space-x-2 text-slate-200"><span>📍</span><span>${item.DOMICILIO3}</span></div>` : ''}
+                    </div>
+
+                    <div class="space-y-2 pt-2">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">VEHÍCULOS / PLACAS:</span>
+                        <div class="flex flex-wrap gap-2 pt-1">
+                            ${plates.length > 0 ? plates.map(p => `
+                                <div class="bg-slate-950 px-3 py-2 rounded-xl border border-slate-800 text-xs font-mono text-slate-200 flex items-center space-x-2">
+                                    <span>🚗</span>
+                                    <span>${p}</span>
+                                </div>
+                            `).join('') : '<span class="text-xs text-slate-500 italic">Ningún vehículo registrado</span>'}
+                        </div>
+                        ${item.OBSERVACIONES ? `
+                            <div class="mt-3 bg-slate-950/80 p-3.5 rounded-xl border border-slate-800/80 text-xs text-slate-300">
+                                <strong class="text-slate-400 block mb-1">Observaciones / Naves:</strong>
+                                ${item.OBSERVACIONES}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</head>
+<body class="h-full bg-slate-950 text-slate-100 flex flex-col font-sans antialiased selection:bg-blue-600 selection:text-white">
+
+    <!-- ================= PANTALLA DE ACCESO PRINCIPAL ================= -->
+    <div id="authScreen" style="display: flex;" class="fixed inset-0 z-50 bg-slate-950 items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6 text-center my-auto">
+            <div class="inline-flex bg-blue-600/10 p-4 rounded-2xl text-blue-500 border border-blue-500/25">
+                <svg class="w-10 h-10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </div>
+            <div class="space-y-2">
+                <h2 class="text-xl font-bold text-white">CONSULTA BBDD</h2>
+                <p class="text-xs text-slate-400">Introduce la contraseña de acceso principal.</p>
+            </div>
+            <div class="space-y-4">
+                <input type="password" id="passwordInput" placeholder="Contraseña..." autocomplete="current-password" onkeydown="if(event.key === 'Enter') verificarClave()" class="w-full px-4 py-3.5 bg-slate-950 border border-slate-800 rounded-xl text-center text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base tracking-widest">
+                <button type="button" onclick="verificarClave()" class="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold text-sm shadow-lg transition-colors cursor-pointer active:scale-98">
+                    Entrar al Sistema
+                </button>
+                <p id="authError" class="text-xs text-red-500 hidden">Contraseña incorrecta.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= APLICACIÓN PRINCIPAL ================= -->
+    <div id="mainApp" style="display: none;" class="h-full flex-col">
+        <!-- Header / Navbar -->
+        <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-30 shadow-md">
+            <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <div class="flex items-center space-x-2 sm:space-x-3">
+                    <div class="bg-blue-600 p-2 rounded-xl text-white shadow-md flex-shrink-0">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                    </div>
+                    <div>
+                        <h1 class="text-sm sm:text-lg font-bold tracking-tight text-white">CONSULTA BBDD</h1>
+                        <p class="text-[10px] sm:text-xs text-slate-400">Base de datos unificada</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2 sm:space-x-4">
+                    <div class="flex items-center space-x-2 bg-slate-950 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-slate-800 text-[11px] sm:text-xs">
+                        <div class="flex items-center space-x-1.5">
+                            <span id="dbStatusDot" class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-amber-500 shadow-lg"></span>
+                            <span id="dbStatusText" class="hidden md:inline text-slate-300 font-medium">Cargando...</span>
+                        </div>
+                        <span class="hidden md:inline text-slate-600">|</span>
+                        <div class="text-slate-300 font-mono">
+                            Registros: <strong id="totalDbCount" class="text-blue-400">0</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Contenido Principal -->
+        <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 overflow-y-auto">
+            <div id="view-search" class="space-y-4 sm:space-y-6">
+                <div class="bg-slate-900 p-3 sm:p-6 rounded-2xl border border-slate-800 shadow-xl space-y-3 sm:space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                        <div class="sm:col-span-1.5 relative">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            </span>
+                            <input type="text" id="searchInput" oninput="filterData()" placeholder="Nombre, DNI, Mote, Matrícula..." class="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                        </div>
+
+                        <div>
+                            <select id="cityFilter" onchange="filterData()" class="w-full py-3 px-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm cursor-pointer">
+                                <option value="">Todas las localidades</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center">
+                            <button type="button" onclick="resetFilters()" class="w-full py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-medium text-sm transition-colors flex items-center justify-center space-x-2 cursor-pointer">
+                                <span>Limpiar filtros</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800 text-xs text-slate-400 px-1">
+                        <span id="resultCount">Cargando registros...</span>
+                    </div>
+                </div>
+
+                <!-- Paginación superior -->
+                <div id="paginationTop"></div>
+
+                <div id="resultsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4"></div>
+                
+                <!-- Paginación inferior -->
+                <div id="paginationBottom"></div>
+            </div>
+
+            <div id="view-detail" class="hidden space-y-4 sm:space-y-6 max-w-2xl mx-auto">
+                <div class="flex items-center justify-between bg-slate-900 p-3 sm:p-4 rounded-2xl border border-slate-800 shadow-md">
+                    <button type="button" onclick="switchTab('search')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-sm font-medium flex items-center space-x-2 transition-colors cursor-pointer">
+                        <span>← Volver al Buscador</span>
+                    </button>
+                </div>
+                <div id="detailContainer" class="space-y-4"></div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
