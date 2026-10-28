@@ -228,11 +228,12 @@
                                     <span class="text-blue-400 font-extrabold text-sm sm:text-2xl tracking-wider">${initials}</span>
                                     ${photoUrl ? `<img src="${photoUrl}" alt="${item.NOMBRE}" class="absolute inset-0 w-full h-full object-cover object-top rounded-lg sm:rounded-xl z-10" onerror="handleImageError(this, '${item.DNI}');">` : ''}
                                 </div>
-                                <div class="min-w-0 flex-1 space-y-0.5 sm:space-y-1">
+                                <div class="min-w-0 flex-1 space-y-0.5">
                                     <span class="px-1 py-0.2 bg-blue-500/10 text-blue-400 rounded text-[7px] sm:text-[10px] font-bold uppercase tracking-wider border border-blue-500/20 inline-block">
                                         ${item.CIUDAD || 'LOCALIDAD'}
                                     </span>
-                                    <h3 class="text-[11px] sm:text-sm font-bold text-white group-hover:text-blue-400 transition-colors leading-tight line-clamp-2">${highlightedName}</h3>
+                                    <!-- Nombre con tamaño optimizado y reducido en móvil para verse completo -->
+                                    <h3 class="text-[10px] sm:text-sm font-bold text-white group-hover:text-blue-400 transition-colors leading-tight line-clamp-2">${highlightedName}</h3>
                                 </div>
                             </div>
 
@@ -301,12 +302,10 @@
             if (bottomContainer) bottomContainer.innerHTML = paginationHtml;
         }
 
-        // Cambio de página optimizado para forzar el scroll al inicio del contenedor principal
         function changePage(targetPage) {
             currentPage = targetPage;
             filterData(false);
 
-            // Resetea el scroll del contenedor principal y del window
             const mainContainer = document.querySelector('main');
             if (mainContainer) {
                 mainContainer.scrollTo({ top: 0, behavior: 'smooth' });
@@ -486,7 +485,7 @@
                 <!-- Paginación superior -->
                 <div id="paginationTop"></div>
 
-                <!-- Cuadrícula -->
+                <!-- Cuadrícula con nombres optimizados en móvil -->
                 <div id="resultsGrid" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4"></div>
                 
                 <!-- Paginación inferior -->
