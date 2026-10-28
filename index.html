@@ -57,4 +57,211 @@
                 </div>
 
                 <div class="flex items-center space-x-2 sm:space-x-4">
-                    <div class="flex items-center space-x-2 bg-slate-950 px-2.5 py-1.
+                    <div class="flex items-center space-x-2 bg-slate-950 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-slate-800 text-[11px] sm:text-xs">
+                        <div class="flex items-center space-x-1.5">
+                            <span id="dbStatusDot" class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-amber-500 shadow-lg"></span>
+                            <span id="dbStatusText" class="hidden md:inline text-slate-300 font-medium">Cargando...</span>
+                        </div>
+                        <span class="hidden md:inline text-slate-600">|</span>
+                        <div class="text-slate-300 font-mono">
+                            Registros: <strong id="totalDbCount" class="text-blue-400">0</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Contenido Principal -->
+        <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 overflow-y-auto">
+            <div id="view-search" class="space-y-4 sm:space-y-6">
+                <div class="bg-slate-900 p-3 sm:p-6 rounded-2xl border border-slate-800 shadow-xl space-y-3 sm:space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                        <div class="sm:col-span-1.5 relative">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            </span>
+                            <input type="text" id="searchInput" oninput="filterData()" placeholder="Nombre, DNI, Mote, Matrícula..." class="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                        </div>
+
+                        <div>
+                            <select id="cityFilter" onchange="filterData()" class="w-full py-3 px-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm cursor-pointer">
+                                <option value="">Todas las localidades</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center">
+                            <button type="button" onclick="resetFilters()" class="w-full py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-medium text-sm transition-colors flex items-center justify-center space-x-2 cursor-pointer">
+                                <span>Limpiar filtros</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800 text-xs text-slate-400 px-1">
+                        <span id="resultCount">Cargando registros...</span>
+                    </div>
+                </div>
+
+                <div id="resultsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6"></div>
+            </div>
+
+            <div id="view-detail" class="hidden space-y-4 sm:space-y-6 max-w-2xl mx-auto">
+                <div class="flex items-center justify-between bg-slate-900 p-3 sm:p-4 rounded-2xl border border-slate-800 shadow-md">
+                    <button type="button" onclick="switchTab('search')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-sm font-medium flex items-center space-x-2 transition-colors cursor-pointer">
+                        <span>← Volver al Buscador</span>
+                    </button>
+                </div>
+                <div id="detailContainer" class="space-y-4"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Script de Carga y Gestión -->
+    <script>
+        let allData = [];
+        let selectedRecordId = null;
+
+        function verificarClave() {
+            const input = document.getElementById('passwordInput');
+            const authError = document.getElementById('authError');
+            
+            if (!input) return;
+            const pass = input.value.trim().toLowerCase();
+
+            if (pass === "udyco") {
+                if (authError) authError.classList.add('hidden');
+                input.blur();
+                document.getElementById('authScreen').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'flex';
+                window.scrollTo(0, 0);
+                loadData();
+            } else {
+                if (authError) authError.classList.remove('hidden');
+            }
+        }
+
+        async function loadData() {
+            try {
+                const resultCount = document.getElementById('resultCount');
+                if (resultCount) resultCount.innerText = "Conectando con el servidor...";
+                
+                const response = await fetch('data.json?t=' + new Date().getTime());
+                if (!response.ok) throw new Error("No se pudo encontrar el archivo data.json.");
+                
+                allData = await response.json();
+                document.getElementById('totalDbCount').innerText = allData.length;
+
+                const localidades = [...new Set(allData.map(item => item.CIUDAD).filter(Boolean))].sort();
+                const citySelect = document.getElementById('cityFilter');
+                if (citySelect) {
+                    citySelect.innerHTML = '<option value="">Todas las localidades</option>' + 
+                        localidades.map(loc => `<option value="${loc}">${loc}</option>`).join('');
+                }
+
+                document.getElementById('dbStatusDot').className = "w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50 animate-pulse";
+                document.getElementById('dbStatusText').innerText = "Conectado";
+                if (resultCount) resultCount.innerText = "Escribe para buscar registros.";
+                document.getElementById('resultsGrid').innerHTML = `<div class="col-span-full py-12 sm:py-16 text-center text-slate-400 bg-slate-900 rounded-2xl border border-slate-800 text-sm px-4">Utiliza el buscador o selecciona una localidad para ver registros.</div>`;
+            } catch (error) {
+                console.error("Error al cargar data.json:", error);
+                document.getElementById('dbStatusDot').className = "w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500 shadow-lg";
+                document.getElementById('dbStatusText').innerText = "Sin conexión a BBDD";
+                const resultCount = document.getElementById('resultCount');
+                if (resultCount) resultCount.innerText = "Aviso: No se encuentra o no se puede leer el archivo data.json.";
+                document.getElementById('resultsGrid').innerHTML = `<div class="col-span-full py-12 text-center text-amber-400 bg-slate-900 rounded-2xl border border-slate-800 text-sm px-4">El sistema ha abierto la interfaz, pero el archivo 'data.json' no responde. Revisa que esté en la misma carpeta que este archivo HTML.</div>`;
+            }
+        }
+
+        function getInitials(name) {
+            if (!name) return "FP";
+            const parts = name.trim().split(" ");
+            if (parts.length >= 2) {
+                return (parts[0][0] + parts[1][0]).toUpperCase();
+            }
+            return name.substring(0, 2).toUpperCase();
+        }
+
+        function getPhotoUrl(item) {
+            if (item.DNI && item.DNI.trim() !== '') {
+                // Respeta el DNI original tal cual viene en el JSON (pueden ser mayúsculas o minúsculas)
+                const cleanDni = item.DNI.trim().replace(/\s+/g, '');
+                return `fotos/${cleanDni}.jpg`;
+            }
+            return null;
+        }
+
+        // Sistema inteligente: si la foto original falla, prueba automáticamente con minúsculas y viceversa
+        function handleImageError(imgElement, dni) {
+            const cleanDni = dni.trim().replace(/\s+/g, '');
+            const currentSrc = imgElement.src;
+            
+            // Si intentó con el original y falló, probamos con todo en minúsculas
+            if (!currentSrc.includes('try_lower=1')) {
+                imgElement.src = `fotos/${cleanDni.toLowerCase()}.jpg?try_lower=1`; } // Si intentó con minúsculas y falló, probamos con todo en mayúsculas else if (!currentSrc.includes('try_upper=1')) { imgElement.src = `fotos/${cleanDni.toUpperCase()}.jpg?try_upper=1`;
+            } 
+            // Si todo falla, borra la imagen y deja las iniciales
+            else {
+                imgElement.remove();
+            }
+        }
+
+        function switchTab(tabName) {
+            const searchView = document.getElementById('view-search');
+            const detailView = document.getElementById('view-detail');
+
+            if (tabName === 'search') {
+                searchView.classList.remove('hidden');
+                detailView.classList.add('hidden');
+            } else {
+                if (!selectedRecordId) return;
+                searchView.classList.add('hidden');
+                detailView.classList.remove('hidden');
+                renderDetail(selectedRecordId);
+            }
+        }
+
+        function filterData() {
+            const queryInput = document.getElementById('searchInput');
+            const cityFilter = document.getElementById('cityFilter');
+            const grid = document.getElementById('resultsGrid');
+            const resultCount = document.getElementById('resultCount');
+
+            if (!queryInput || !grid) return;
+
+            const query = queryInput.value.toLowerCase().trim();
+            const selectedCity = cityFilter ? cityFilter.value : '';
+
+            if (query === '' && !selectedCity) {
+                grid.innerHTML = `<div class="col-span-full py-12 sm:py-16 text-center text-slate-400 bg-slate-900 rounded-2xl border border-slate-800 text-sm px-4">Utiliza el buscador o selecciona una localidad para ver registros.</div>`;
+                resultCount.innerText = "Esperando búsqueda...";
+                return;
+            }
+
+            const filtered = allData.filter(item => {
+                if (selectedCity && item.CIUDAD !== selectedCity) return false;
+                if (query === '') return true;
+                return Object.values(item).some(val => String(val).toLowerCase().includes(query));
+            });
+
+            const maxDisplayLimit = 40;
+            const limitedFiltered = filtered.slice(0, maxDisplayLimit);
+
+            if (filtered.length > maxDisplayLimit) {
+                resultCount.innerText = `Mostrando ${maxDisplayLimit} de ${filtered.length} coincidentes`; } else { resultCount.innerText = `Mostrados ${filtered.length} registros`;
+            }
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-full py-12 sm:py-16 text-center text-slate-400 bg-slate-900 rounded-2xl border border-slate-800 text-sm px-4">No se encontraron registros coincidentes.</div>`;
+                return;
+            }
+
+            grid.innerHTML = limitedFiltered.map(item => {
+                const initials = getInitials(item.NOMBRE);
+                const plates = [];
+                if (item.PLACA1) plates.push(item.PLACA1);
+                if (item.PLACA2) plates.push(item.PLACA2);
+                if (item.PLACA3) plates.push(item.PLACA3);
+                if (item.PLACA4) plates.push(item.PLACA4);
+
+                const photoUrl = getPhotoUrl(item);
+
+                return `
+                    <div class="bg-slate-900 border border-slate-800 hover:border-blue-500/50 rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col justify-between group transition-all space-y-3
