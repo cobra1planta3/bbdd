@@ -33,7 +33,7 @@
         let allData = [];
         let selectedRecordId = null;
         let currentPage = 1;
-        const itemsPerPage = 40; // Ajustado a 40 registros por página
+        const itemsPerPage = 40;
 
         function verificarClave() {
             const input = document.getElementById('passwordInput');
@@ -113,7 +113,6 @@
             }
         }
 
-        // Función para resaltar el texto buscado en los resultados
         function highlightText(text, query) {
             if (!text) return '-';
             const strText = String(text);
@@ -188,6 +187,7 @@
                 return;
             }
 
+            // Cuadrícula optimizada: grid-cols-2 en móvil (para mostrar 4+ fichas compactas de un vistazo) y lg:grid-cols-4 en PC
             grid.innerHTML = paginatedItems.map(item => {
                 const initials = getInitials(item.NOMBRE);
                 const plates = [];
@@ -203,64 +203,57 @@
                 const highlightedMote = highlightText(item.MOTE || 'Ninguno', query);
                 const highlightedFecha = highlightText(item.FECHA || '-', query);
                 const highlightedDomicilio = highlightText(item.DOMICILIO1 || 'Sin domicilio', query);
-                const highlightedObs = item.OBSERVACIONES ? highlightText(item.OBSERVACIONES, query) : '';
 
                 return `
-                    <div class="bg-slate-900 border border-slate-800 hover:border-blue-500/50 rounded-2xl p-3.5 sm:p-4 shadow-xl flex flex-col justify-between group transition-all space-y-3">
-                        <div class="cursor-pointer space-y-3" onclick="selectRecord(${item.id})">
-                            <div class="flex items-center space-x-3 pb-3 border-b border-slate-800">
-                                <div class="w-24 h-28 sm:w-28 sm:h-32 bg-slate-950 border-2 border-slate-700/80 rounded-xl flex items-center justify-center shadow-inner flex-shrink-0 overflow-hidden group-hover:border-blue-500/80 transition-colors relative">
-                                    <span class="text-blue-400 font-extrabold text-xl sm:text-2xl tracking-wider">${initials}</span>
+                    <div class="bg-slate-900 border border-slate-800 hover:border-blue-500/50 rounded-2xl p-2.5 sm:p-4 shadow-xl flex flex-col justify-between group transition-all space-y-2.5">
+                        <div class="cursor-pointer space-y-2.5" onclick="selectRecord(${item.id})">
+                            <div class="flex flex-col sm:flex-row items-center sm:items-start space-y-2 sm:space-y-0 sm:space-x-3 pb-2.5 border-b border-slate-800 text-center sm:text-left">
+                                <div class="w-20 h-24 sm:w-28 sm:h-32 bg-slate-950 border-2 border-slate-700/80 rounded-xl flex items-center justify-center shadow-inner flex-shrink-0 overflow-hidden group-hover:border-blue-500/80 transition-colors relative mx-auto sm:mx-0">
+                                    <span class="text-blue-400 font-extrabold text-lg sm:text-2xl tracking-wider">${initials}</span>
                                     ${photoUrl ? `<img src="${photoUrl}" alt="${item.NOMBRE}" class="absolute inset-0 w-full h-full object-cover object-top rounded-xl z-10" onerror="handleImageError(this, '${item.DNI}');">` : ''}
                                 </div>
-                                <div class="min-w-0 flex-1 space-y-1">
-                                    <span class="px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-md text-[9px] sm:text-[10px] font-bold uppercase tracking-wider border border-blue-500/20 inline-block">
+                                <div class="min-w-0 flex-1 space-y-1 w-full">
+                                    <span class="px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded text-[8px] sm:text-[10px] font-bold uppercase tracking-wider border border-blue-500/20 inline-block">
                                         ${item.CIUDAD || 'LOCALIDAD'}
                                     </span>
                                     <h3 class="text-xs sm:text-sm font-bold text-white group-hover:text-blue-400 transition-colors leading-tight line-clamp-2">${highlightedName}</h3>
                                 </div>
                             </div>
 
-                            <div class="space-y-1.5 text-xs">
-                                <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800/80 flex justify-between items-center">
+                            <div class="space-y-1 text-[11px] sm:text-xs">
+                                <div class="bg-slate-950/80 p-1.5 sm:p-2 rounded-lg border border-slate-800/80 flex justify-between items-center">
                                     <span class="text-slate-400">DNI:</span>
                                     <span class="text-slate-100 font-mono font-semibold">${highlightedDni}</span>
                                 </div>
-                                <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800/80 flex justify-between items-center">
+                                <div class="bg-slate-950/80 p-1.5 sm:p-2 rounded-lg border border-slate-800/80 flex justify-between items-center">
                                     <span class="text-slate-400">ALIAS:</span>
-                                    <span class="text-amber-400 font-semibold truncate max-w-[120px]">${highlightedMote}</span>
+                                    <span class="text-amber-400 font-semibold truncate max-w-[90px] sm:max-w-[120px]">${highlightedMote}</span>
                                 </div>
-                                <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800/80 flex justify-between items-center">
+                                <div class="bg-slate-950/80 p-1.5 sm:p-2 rounded-lg border border-slate-800/80 flex justify-between items-center">
                                     <span class="text-slate-400">AÑO:</span>
                                     <span class="text-slate-100 font-mono">${highlightedFecha}</span>
                                 </div>
-                                <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800/80 space-y-0.5">
-                                    <span class="text-slate-400 block text-[11px]">DOMICILIO:</span>
+                                <div class="bg-slate-950/80 p-1.5 sm:p-2 rounded-lg border border-slate-800/80 space-y-0.5">
+                                    <span class="text-slate-400 block text-[10px]">DOMICILIO:</span>
                                     <span class="text-slate-200 block truncate">${highlightedDomicilio}</span>
                                 </div>
-                                <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800/80 space-y-1">
-                                    <span class="text-slate-400 block text-[11px]">VEHÍCULOS:</span>
+                                <div class="bg-slate-950/80 p-1.5 sm:p-2 rounded-lg border border-slate-800/80 space-y-1">
+                                    <span class="text-slate-400 block text-[10px]">VEHÍCULOS:</span>
                                     <div class="flex flex-wrap gap-1">
                                         ${plates.length > 0 ? plates.map(p => `
-                                            <span class="bg-slate-900 px-1.5 py-0.5 rounded-lg border border-slate-700 text-[9px] font-mono text-blue-300 flex items-center space-x-1">
+                                            <span class="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700 text-[9px] font-mono text-blue-300 flex items-center space-x-1">
                                                 <span>🚗</span>
                                                 <span>${highlightText(p, query)}</span>
                                             </span>
-                                        `).join('') : '<span class="text-slate-500 italic text-[11px]">Ninguno</span>'}
+                                        `).join('') : '<span class="text-slate-500 italic text-[10px]">Ninguno</span>'}
                                     </div>
                                 </div>
-                                ${item.OBSERVACIONES ? `
-                                    <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800/80 space-y-0.5">
-                                        <span class="text-slate-400 block text-[11px]">OBSERVACIONES:</span>
-                                        <span class="text-slate-300 block line-clamp-2">${highlightedObs}</span>
-                                    </div>
-                                ` : ''}
                             </div>
                         </div>
 
                         <div class="pt-2 flex items-center justify-end border-t border-slate-800">
-                            <button type="button" onclick="selectRecord(${item.id})" class="text-xs text-blue-400 font-medium hover:underline flex items-center space-x-1 cursor-pointer py-1">
-                                <span>Ver desglose completo →</span>
+                            <button type="button" onclick="selectRecord(${item.id})" class="text-[11px] text-blue-400 font-medium hover:underline flex items-center space-x-1 cursor-pointer py-0.5">
+                                <span>Ver detalle →</span>
                             </button>
                         </div>
                     </div>
@@ -272,14 +265,14 @@
 
         function renderPagination(totalPages) {
             const paginationHtml = totalPages <= 1 ? '' : `
-                <div class="flex items-center justify-center space-x-3 py-4 bg-slate-900/50 rounded-2xl border border-slate-800 my-4">
-                    <button type="button" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled class="px-4 py-2 bg-slate-900 text-slate-600 border border-slate-800 rounded-xl cursor-not-allowed text-sm font-medium"' : 'class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl cursor-pointer text-sm font-medium transition-colors"'}>
+                <div class="flex items-center justify-center space-x-3 py-3 bg-slate-900/50 rounded-2xl border border-slate-800 my-3 text-xs sm:text-sm">
+                    <button type="button" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled class="px-3 py-1.5 bg-slate-900 text-slate-600 border border-slate-800 rounded-xl cursor-not-allowed font-medium"' : 'class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl cursor-pointer font-medium transition-colors"'}>
                         ← Anterior
                     </button>
-                    <span class="text-xs sm:text-sm text-slate-300 font-mono px-3">
+                    <span class="text-slate-300 font-mono px-2">
                         Página <strong class="text-blue-400">${currentPage}</strong> de <strong class="text-slate-100">${totalPages}</strong>
                     </span>
-                    <button type="button" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled class="px-4 py-2 bg-slate-900 text-slate-600 border border-slate-800 rounded-xl cursor-not-allowed text-sm font-medium"' : 'class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl cursor-pointer text-sm font-medium transition-colors"'}>
+                    <button type="button" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled class="px-3 py-1.5 bg-slate-900 text-slate-600 border border-slate-800 rounded-xl cursor-not-allowed font-medium"' : 'class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl cursor-pointer font-medium transition-colors"'}>
                         Siguiente →
                     </button>
                 </div>
@@ -439,8 +432,8 @@
         </header>
 
         <!-- Contenido Principal -->
-        <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 overflow-y-auto">
-            <div id="view-search" class="space-y-4 sm:space-y-6">
+        <main class="flex-1 max-w-7xl w-full mx-auto p-2 sm:p-6 overflow-y-auto">
+            <div id="view-search" class="space-y-4">
                 <div class="bg-slate-900 p-3 sm:p-6 rounded-2xl border border-slate-800 shadow-xl space-y-3 sm:space-y-4">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                         <div class="sm:col-span-1.5 relative">
@@ -470,7 +463,8 @@
                 <!-- Paginación superior -->
                 <div id="paginationTop"></div>
 
-                <div id="resultsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4"></div>
+                <!-- Cuadrícula adaptada a móviles (grid-cols-2) y ordenadores (lg:grid-cols-4) -->
+                <div id="resultsGrid" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4"></div>
                 
                 <!-- Paginación inferior -->
                 <div id="paginationBottom"></div>
