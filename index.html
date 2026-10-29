@@ -33,6 +33,7 @@
         let allData = [];
         let selectedRecordId = null;
         let currentPage = 1;
+        let lastScrollPosition = 0; // Guardará la posición del scroll al entrar en una ficha
         const itemsPerPage = 40;
 
         function verificarClave() {
@@ -95,19 +96,30 @@
             return name.substring(0, 2).toUpperCase();
         }
 
+        // Función adaptada para DNI y NIE (Soporta extranjeros con X, Y, Z)
+        function cleanDocString(doc) {
+            if (!doc) return '';
+            return doc.trim().replace(/[^a-zA-Z0-9]/g, '');
+        }
+
         function getPhotoUrl(item) {
-            if (item.DNI && item.DNI.trim() !== '') {
-                const cleanDni = item.DNI.trim().replace(/\s+/g, '');
-                return `fotos/${cleanDni}.jpg`;
+            const cleanDoc = cleanDocString(item.DNI);
+            if (cleanDoc !== '') {
+                return `fotos/${cleanDoc.toUpperCase()}.jpg`;
             }
             return null;
         }
 
         function handleImageError(imgElement, dni) {
-            if (!imgElement.dataset.retried) {
-                imgElement.dataset.retried = "true";
-                const cleanDni = dni.trim().replace(/\s+/g, '');
-                imgElement.src = `fotos/${cleanDni.toLowerCase()}.jpg`;
+            const step = parseInt(imgElement.dataset.step || '0', 10);
+            const cleanDoc = cleanDocString(dni);
+
+            if (step === 0 && cleanDoc) {
+                imgElement.dataset.step = '1';
+                imgElement.src = `fotos/${cleanDoc.toLowerCase()}.jpg`;
+            } else if (step === 1 && cleanDoc) {
+                imgElement.dataset.step = '2';
+                imgElement.src = `fotos/${cleanDoc}.jpeg`;
             } else {
                 imgElement.remove();
             }
@@ -151,11 +163,20 @@
             if (tabName === 'search') {
                 searchView.classList.remove('hidden');
                 detailView.classList.add('hidden');
+                
+                // Al volver, restauramos la posición exacta donde estaba el usuario
+                setTimeout(() => {
+                    window.scrollTo({ top: lastScrollPosition, behavior: 'instant' });
+                }, 10);
             } else {
                 if (!selectedRecordId) return;
+                // Guardamos la posición actual antes de irnos al detalle
+                lastScrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+                
                 searchView.classList.add('hidden');
                 detailView.classList.remove('hidden');
                 renderDetail(selectedRecordId);
+                window.scrollTo({ top: 0, behavior: 'instant' });
             }
         }
 
@@ -232,14 +253,13 @@
                                     <span class="px-1 py-0.2 bg-blue-500/10 text-blue-400 rounded text-[7px] sm:text-[10px] font-bold uppercase tracking-wider border border-blue-500/20 inline-block">
                                         ${item.CIUDAD || 'LOCALIDAD'}
                                     </span>
-                                    <!-- Nombre con tamaño optimizado y reducido en móvil para verse completo -->
                                     <h3 class="text-[10px] sm:text-sm font-bold text-white group-hover:text-blue-400 transition-colors leading-tight line-clamp-2">${highlightedName}</h3>
                                 </div>
                             </div>
 
                             <div class="space-y-1 text-[10px] sm:text-xs">
                                 <div class="bg-slate-950/80 px-1.5 py-1 rounded border border-slate-800/80 flex justify-between items-center">
-                                    <span class="text-slate-400 text-[9px] sm:text-[11px]">DNI:</span>
+                                    <span class="text-slate-400 text-[9px] sm:text-[11px]">DNI / NIE:</span>
                                     <span class="text-slate-100 font-mono font-semibold truncate ml-1">${highlightedDni}</span>
                                 </div>
                                 <div class="bg-slate-950/80 px-1.5 py-1 rounded border border-slate-800/80 flex justify-between items-center">
@@ -356,7 +376,7 @@
 
                     <div class="space-y-2.5 text-sm">
                         <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800/80 flex items-center justify-between">
-                            <span class="text-slate-400">DNI:</span>
+                            <span class="text-slate-400">DNI / NIE:</span>
                             <span class="text-slate-100 font-mono font-semibold">${item.DNI || 'No registrado'}</span>
                         </div>
                         <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800/80 flex items-center justify-between">
@@ -462,7 +482,7 @@
                             <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                             </span>
-                            <input type="text" id="searchInput" oninput="filterData()" placeholder="Nombre, DNI, Mote, Matrícula..." class="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                            <input type="text" id="searchInput" oninput="filterData()" placeholder="Nombre, DNI, NIE, Mote, Matrícula..." class="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
                         </div>
 
                         <div>
