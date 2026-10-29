@@ -96,7 +96,6 @@
             return name.substring(0, 2).toUpperCase();
         }
 
-        // Función adaptada para DNI y NIE (Soporta extranjeros con X, Y, Z)
         function cleanDocString(doc) {
             if (!doc) return '';
             return doc.trim().replace(/[^a-zA-Z0-9]/g, '');
@@ -123,6 +122,16 @@
             } else {
                 imgElement.remove();
             }
+        }
+
+        // Función para normalizar texto (quita tildes, espacios y pasa a mayúsculas para comparaciones limpias)
+        function normalizeText(text) {
+            if (!text) return "";
+            return text.toString()
+                       .normalize("NFD")
+                       .replace(/[\u0300-\u036f]/g, "")
+                       .trim()
+                       .toUpperCase();
         }
 
         function highlightText(text, query) {
@@ -164,13 +173,11 @@
                 searchView.classList.remove('hidden');
                 detailView.classList.add('hidden');
                 
-                // Al volver, restauramos la posición exacta donde estaba el usuario
                 setTimeout(() => {
                     window.scrollTo({ top: lastScrollPosition, behavior: 'instant' });
                 }, 10);
             } else {
                 if (!selectedRecordId) return;
-                // Guardamos la posición actual antes de irnos al detalle
                 lastScrollPosition = window.pageYOffset || document.documentElement.scrollTop;
                 
                 searchView.classList.add('hidden');
@@ -203,8 +210,13 @@
                 return;
             }
 
+            // Filtrado estricto adaptado para evitar cruces parciales de localidades
             const filtered = allData.filter(item => {
-                if (selectedCity && item.CIUDAD !== selectedCity) return false;
+                if (selectedCity) {
+                    const itemCityNorm = normalizeText(item.CIUDAD);
+                    const selectedCityNorm = normalizeText(selectedCity);
+                    if (itemCityNorm !== selectedCityNorm) return false;
+                }
                 if (query === '') return true;
                 return Object.values(item).some(val => String(val).toLowerCase().includes(query));
             });
@@ -518,9 +530,10 @@
                         <span>← Volver al Buscador</span>
                     </button>
                 </div>
-                <div id="detailContainer" class="space-y-4"></div>
+                <div id="detailContainer"></div>
             </div>
         </main>
     </div>
+
 </body>
 </html>
