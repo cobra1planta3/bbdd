@@ -175,14 +175,22 @@
             if (tabName === 'search') {
                 searchView.classList.remove('hidden');
                 detailView.classList.add('hidden');
-                // Restauramos la posición exacta del scroll al volver del detalle
-                setTimeout(() => {
-                    window.scrollTo({ top: lastScrollPosition, behavior: 'instant' });
-                }, 10);
+                
+                // Forzamos la restauración exacta del scroll mediante múltiples reintentos para asegurar que el navegador haya renderizado
+                const restoreScroll = () => {
+                    window.scrollTo(0, lastScrollPosition);
+                    document.documentElement.scrollTop = lastScrollPosition;
+                    document.body.scrollTop = lastScrollPosition;
+                };
+
+                restoreScroll();
+                setTimeout(restoreScroll, 10);
+                setTimeout(restoreScroll, 50);
             } else {
                 searchView.classList.add('hidden');
                 detailView.classList.remove('hidden');
                 window.scrollTo({ top: 0, behavior: 'instant' });
+                document.documentElement.scrollTop = 0;
             }
         }
 
@@ -251,22 +259,21 @@
                 const hasMote = item.MOTE && item.MOTE.trim() !== '' && item.MOTE.trim().toLowerCase() !== 'ninguno';
                 const hasObs = item.OBSERVACIONES && item.OBSERVACIONES.trim() !== '';
                 
-                // Comprobamos si las observaciones contienen la palabra "muerto" o "fallecido"
                 const isMuerto = hasObs && (item.OBSERVACIONES.toLowerCase().includes('muerto') || item.OBSERVACIONES.toLowerCase().includes('fallecido'));
 
                 return `
                     <div onclick="selectRecord(${item._internalId})" class="bg-slate-900 border ${isMuerto ? 'border-red-500/80 shadow-red-500/15' : 'border-slate-800'} hover:border-blue-500/50 rounded-xl p-2 sm:p-3 shadow-xl flex flex-col justify-between group transition-all space-y-1 cursor-pointer relative overflow-hidden">
                         
-                        <!-- CRUZ ROJA TRANSLÚCIDA DE MAYOR GROSOR SI ESTÁ FALLECIDO -->
+                        <!-- CRUZ ROJA DE MAYOR GROSOR SI ESTÁ FALLECIDO -->
                         ${isMuerto ? `
                             <div class="absolute inset-0 pointer-events-none z-20 flex items-center justify-center opacity-55">
-                                <div class="w-full h-1.5 bg-red-600 transform rotate-45 absolute shadow-md"></div>
-                                <div class="w-full h-1.5 bg-red-600 transform -rotate-45 absolute shadow-md"></div>
+                                <div class="w-full h-2 bg-red-600 transform rotate-45 absolute shadow-md"></div>
+                                <div class="w-full h-2 bg-red-600 transform -rotate-45 absolute shadow-md"></div>
                             </div>
                         ` : ''}
 
                         <div class="space-y-1 relative z-10">
-                            <!-- Fila superior: Solo el mote limpio sin recuadro -->
+                            <!-- Fila superior: Solo el mote limpio -->
                             ${hasMote ? `
                                 <div class="pb-0.5">
                                     <span class="text-amber-400 font-bold text-[9px] sm:text-xs tracking-wide truncate block w-full" title="${item.MOTE}">
@@ -300,6 +307,17 @@
                                 <div class="bg-slate-950/80 px-1.5 py-0.5 rounded border border-slate-800/80 space-y-0.5">
                                     <span class="text-slate-400 block text-[8px] sm:text-[9px]">DOMICILIO:</span>
                                     <div class="text-slate-200 truncate text-[9px] sm:text-[11px]">${formattedDomicilio}</div>
+                                </div>
+                                <div class="bg-slate-950/80 px-1.5 py-0.5 rounded border border-slate-800/80 space-y-1">
+                                    <span class="text-slate-400 block text-[8px] sm:text-[9px]">VEHÍCULOS:</span>
+                                    <div class="flex flex-wrap gap-1">
+                                        ${plates.length > 0 ? plates.map(p => `
+                                            <span class="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700 text-[8px] sm:text-[9px] font-mono text-blue-300 flex items-center space-x-1">
+                                                <span>🚗</span>
+                                                <span>${highlightText(p, query)}</span>
+                                            </span>
+                                        `).join('') : '<span class="text-slate-500 italic text-[9px]">Ninguno</span>'}
+                                    </div>
                                 </div>
                                 ${hasObs ? `
                                     <div class="text-[9px] sm:text-[10px] truncate px-0.5 ${isMuerto ? 'text-red-400 font-bold' : 'text-amber-200/90'}">
@@ -357,8 +375,8 @@
         }
 
         function selectRecord(id) {
-            // CAPTURA EXACTA DE LA POSICIÓN ACTUAL ANTES DE ABRIR EL DETALLE
-            lastScrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+            // CAPTURA EXACTA DE LA POSICIÓN ACTUAL DEL SCROLL ANTES DE ABRIR EL DETALLE
+            lastScrollPosition = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
 
             const numericId = parseInt(id, 10);
             const item = allData.find(d => d._internalId === numericId);
