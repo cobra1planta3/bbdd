@@ -63,7 +63,14 @@
                 const response = await fetch('data.json?t=' + new Date().getTime());
                 if (!response.ok) throw new Error("No se pudo encontrar el archivo data.json.");
                 
-                allData = await response.json();
+                const rawData = await response.json();
+                
+                // Asignación de identificador único garantizado por posición
+                allData = rawData.map((item, index) => ({
+                    ...item,
+                    _internalId: item.id !== undefined ? item.id : index
+                }));
+
                 document.getElementById('totalDbCount').innerText = allData.length;
 
                 const localidades = [...new Set(allData.map(item => item.CIUDAD).filter(Boolean))].sort();
@@ -124,7 +131,6 @@
             }
         }
 
-        // Función para normalizar texto (quita tildes, espacios y pasa a mayúsculas para comparaciones limpias)
         function normalizeText(text) {
             if (!text) return "";
             return text.toString()
@@ -177,7 +183,7 @@
                     window.scrollTo({ top: lastScrollPosition, behavior: 'instant' });
                 }, 10);
             } else {
-                if (!selectedRecordId) return;
+                if (selectedRecordId === null || selectedRecordId === undefined) return;
                 lastScrollPosition = window.pageYOffset || document.documentElement.scrollTop;
                 
                 searchView.classList.add('hidden');
@@ -210,7 +216,6 @@
                 return;
             }
 
-            // Filtrado estricto adaptado para evitar cruces parciales de localidades
             const filtered = allData.filter(item => {
                 if (selectedCity) {
                     const itemCityNorm = normalizeText(item.CIUDAD);
@@ -255,9 +260,10 @@
 
                 return `
                     <div class="bg-slate-900 border border-slate-800 hover:border-blue-500/50 rounded-xl p-2 sm:p-4 shadow-xl flex flex-col justify-between group transition-all space-y-1.5 sm:space-y-2.5">
-                        <div class="cursor-pointer space-y-1.5 sm:space-y-2.5" onclick="selectRecord(${item.id})">
-                            <div class="flex items-center space-x-2 sm:space-x-3 pb-2 border-b border-slate-800">
-                                <div class="w-14 h-16 sm:w-28 sm:h-32 bg-slate-950 border border-slate-700/80 rounded-lg sm:rounded-xl flex items-center justify-center shadow-inner flex-shrink-0 overflow-hidden group-hover:border-blue-500/80 transition-colors relative">
+                        <div class="cursor-pointer space-y-1.5 sm:space-y-2.5" onclick="selectRecord(${item._internalId})">
+                            <div class="flex items-center space-x-2.5 sm:space-x-3.5 pb-2 border-b border-slate-800">
+                                <!-- Contenedor de foto ampliado en ancho y alto -->
+                                <div class="w-16 h-20 sm:w-28 sm:h-36 bg-slate-950 border border-slate-700/80 rounded-lg sm:rounded-xl flex items-center justify-center shadow-inner flex-shrink-0 overflow-hidden group-hover:border-blue-500/80 transition-colors relative">
                                     <span class="text-blue-400 font-extrabold text-sm sm:text-2xl tracking-wider">${initials}</span>
                                     ${photoUrl ? `<img src="${photoUrl}" alt="${item.NOMBRE}" class="absolute inset-0 w-full h-full object-cover object-top rounded-lg sm:rounded-xl z-10" onerror="handleImageError(this, '${item.DNI}');">` : ''}
                                 </div>
@@ -265,7 +271,8 @@
                                     <span class="px-1 py-0.2 bg-blue-500/10 text-blue-400 rounded text-[7px] sm:text-[10px] font-bold uppercase tracking-wider border border-blue-500/20 inline-block">
                                         ${item.CIUDAD || 'LOCALIDAD'}
                                     </span>
-                                    <h3 class="text-[10px] sm:text-sm font-bold text-white group-hover:text-blue-400 transition-colors leading-tight line-clamp-2">${highlightedName}</h3>
+                                    <!-- Fuente de nombre optimizada y más pequeña para mostrarlo completo -->
+                                    <h3 class="text-[9px] sm:text-xs font-semibold text-white group-hover:text-blue-400 transition-colors leading-tight line-clamp-3">${highlightedName}</h3>
                                 </div>
                             </div>
 
@@ -301,7 +308,7 @@
                         </div>
 
                         <div class="pt-1.5 sm:pt-2 flex items-center justify-end border-t border-slate-800">
-                            <button type="button" onclick="selectRecord(${item.id})" class="text-[10px] sm:text-[11px] text-blue-400 font-medium hover:underline flex items-center space-x-1 cursor-pointer py-0.5">
+                            <button type="button" onclick="selectRecord(${item._internalId})" class="text-[10px] sm:text-[11px] text-blue-400 font-medium hover:underline flex items-center space-x-1 cursor-pointer py-0.5">
                                 <span>Ver detalle →</span>
                             </button>
                         </div>
@@ -357,7 +364,7 @@
         }
 
         function renderDetail(id) {
-            const item = allData.find(d => d.id === id);
+            const item = allData.find(d => d._internalId === id);
             const container = document.getElementById('detailContainer');
             if (!item || !container) return;
 
@@ -381,8 +388,8 @@
                             <span class="px-2.5 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold uppercase tracking-wider inline-block">
                                 ${item.CIUDAD || 'LOCALIDAD'}
                             </span>
-                            <h2 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight leading-snug">${item.NOMBRE}</h2>
-                            <p class="text-xs text-slate-400 font-mono">Registro ID: #${item.id}</p>
+                            <h2 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight leading-snug">${item.NOMBRE || 'SIN NOMBRE'}</h2>
+                            <p class="text-xs text-slate-400 font-mono">ID Interno: #${item._internalId}</p>
                         </div>
                     </div>
 
@@ -524,11 +531,13 @@
                 <div id="paginationBottom"></div>
             </div>
 
+            <!-- Vista de detalle -->
             <div id="view-detail" class="hidden space-y-4 sm:space-y-6 max-w-2xl mx-auto">
-                <div class="flex items-center justify-between bg-slate-900 p-3 sm:p-4 rounded-2xl border border-slate-800 shadow-md">
-                    <button type="button" onclick="switchTab('search')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-sm font-medium flex items-center space-x-2 transition-colors cursor-pointer">
-                        <span>← Volver al Buscador</span>
+                <div class="flex items-center justify-between bg-slate-900 px-4 py-3 rounded-xl border border-slate-800">
+                    <button type="button" onclick="switchTab('search')" class="text-xs sm:text-sm text-blue-400 font-medium hover:underline flex items-center space-x-1 cursor-pointer">
+                        <span>← Volver al buscador</span>
                     </button>
+                    <span class="text-xs text-slate-400 font-mono">Ficha de Registro</span>
                 </div>
                 <div id="detailContainer"></div>
             </div>
