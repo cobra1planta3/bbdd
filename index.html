@@ -176,14 +176,15 @@
                 searchView.classList.remove('hidden');
                 detailView.classList.add('hidden');
                 
-                // Forzamos la restauración exacta del scroll mediante múltiples reintentos para asegurar que el navegador haya renderizado
+                // Restauración inmediata y mediante múltiples reintentos para asegurar la posición exacta en todos los navegadores
                 const restoreScroll = () => {
-                    window.scrollTo(0, lastScrollPosition);
+                    window.scrollTo({ top: lastScrollPosition, behavior: 'instant' });
                     document.documentElement.scrollTop = lastScrollPosition;
                     document.body.scrollTop = lastScrollPosition;
                 };
 
                 restoreScroll();
+                setTimeout(restoreScroll, 0);
                 setTimeout(restoreScroll, 10);
                 setTimeout(restoreScroll, 50);
             } else {
@@ -292,14 +293,15 @@
                                 </div>
                             </div>
 
-                            <!-- Línea justo encima del DNI con la ciudad alineada a la derecha del todo -->
-                            <div class="flex justify-end pt-0.5 pb-0.5 border-t border-slate-800/60">
+                            <!-- Ciudad colocada justo encima de la única línea divisoria -->
+                            <div class="flex justify-end pt-1 pb-0.5">
                                 <span class="text-blue-400 text-[8px] sm:text-[10px] font-bold uppercase tracking-wider">
                                     ${item.CIUDAD || 'LOCALIDAD'}
                                 </span>
                             </div>
 
-                            <div class="space-y-0.5 text-[9px] sm:text-[11px]">
+                            <!-- Única línea divisoria y bloque de datos -->
+                            <div class="space-y-0.5 text-[9px] sm:text-[11px] border-t border-slate-800 pt-1">
                                 <div class="bg-slate-950/80 px-1.5 py-0.5 rounded border border-slate-800/80 flex justify-between items-center">
                                     <span class="text-slate-400 text-[8px] sm:text-[10px]">DNI / NIE:</span>
                                     <span class="text-slate-100 font-mono font-semibold truncate ml-1">${highlightedDni}</span>
