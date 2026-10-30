@@ -367,7 +367,14 @@
         function changePage(targetPage) {
             currentPage = targetPage;
             filterData(false);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // Scroll hacia la parte superior de las fichas
+            const resultsGrid = document.getElementById('resultsGrid');
+            if (resultsGrid) {
+                resultsGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
         }
 
         function resetFilters() {
