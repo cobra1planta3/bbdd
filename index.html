@@ -171,14 +171,16 @@
         function switchTab(tabName) {
             const searchView = document.getElementById('view-search');
             const detailView = document.getElementById('view-detail');
+            const mainContainer = document.querySelector('main'); // Contenedor con scroll
 
             if (tabName === 'search') {
                 searchView.classList.remove('hidden');
                 detailView.classList.add('hidden');
                 
-                // Restauración inmediata y mediante múltiples reintentos para asegurar la posición exacta en todos los navegadores
+                // Forzamos la restauración exacta del scroll tanto en el contenedor principal como en la ventana
                 const restoreScroll = () => {
-                    window.scrollTo({ top: lastScrollPosition, behavior: 'instant' });
+                    if (mainContainer) mainContainer.scrollTop = lastScrollPosition;
+                    window.scrollTo(0, lastScrollPosition);
                     document.documentElement.scrollTop = lastScrollPosition;
                     document.body.scrollTop = lastScrollPosition;
                 };
@@ -190,6 +192,7 @@
             } else {
                 searchView.classList.add('hidden');
                 detailView.classList.remove('hidden');
+                if (mainContainer) mainContainer.scrollTo({ top: 0, behavior: 'instant' });
                 window.scrollTo({ top: 0, behavior: 'instant' });
                 document.documentElement.scrollTop = 0;
             }
@@ -368,7 +371,6 @@
             currentPage = targetPage;
             filterData(false);
             
-            // Scroll hacia la parte superior de las fichas
             const resultsGrid = document.getElementById('resultsGrid');
             if (resultsGrid) {
                 resultsGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -384,8 +386,9 @@
         }
 
         function selectRecord(id) {
-            // CAPTURA EXACTA DE LA POSICIÓN ACTUAL DEL SCROLL ANTES DE ABRIR EL DETALLE
-            lastScrollPosition = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+            // CAPTURA EXACTA DE LA POSICIÓN DEL SCROLL (Tanto en el contenedor principal como en la ventana)
+            const mainContainer = document.querySelector('main');
+            lastScrollPosition = mainContainer ? mainContainer.scrollTop : (window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0);
 
             const numericId = parseInt(id, 10);
             const item = allData.find(d => d._internalId === numericId);
