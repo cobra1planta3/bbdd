@@ -143,18 +143,26 @@
                         ${isMuerto ? '<div class="absolute inset-0 pointer-events-none z-20 flex items-center justify-center opacity-55"><div class="w-full h-2 bg-red-600 transform rotate-45 absolute"></div><div class="w-full h-2 bg-red-600 transform -rotate-45 absolute"></div></div>' : ''}
                         <div class="space-y-1 relative z-10">
                             ${hasMote ? `<div class="pb-0.5"><span class="text-amber-400 font-bold text-[9px] sm:text-xs tracking-wide truncate block w-full">${highlightText(item.MOTE, query)}</span></div>` : '<div class="h-1"></div>'}
+                            
+                            <!-- Bloque superior con Foto, Nombre, Año (verde) y Localidad (naranja) -->
                             <div class="flex items-center space-x-2 pb-1.5 border-b border-slate-800">
                                 <div class="w-12 h-16 sm:w-20 sm:h-28 bg-slate-950 border border-slate-700/80 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden relative">
                                     <span class="text-blue-400 font-extrabold text-xs sm:text-lg">${getInitials(item.NOMBRE)}</span>
                                     ${photo ? `<img src="${photo}" class="absolute inset-0 w-full h-full object-cover object-top rounded-lg z-10" onerror="handleImageError(this, '${item.DNI}')">` : ''}
                                 </div>
-                                <h3 class="text-[9px] sm:text-xs font-semibold text-white group-hover:text-blue-400 line-clamp-2">${highlightText(item.NOMBRE || 'SIN NOMBRE', query)}</h3>
+                                <div class="min-w-0 flex-1 flex flex-col justify-between self-stretch py-0.5">
+                                    <h3 class="text-[9px] sm:text-xs font-semibold text-white group-hover:text-blue-400 line-clamp-2">${highlightText(item.NOMBRE || 'SIN NOMBRE', query)}</h3>
+                                    <div class="flex justify-between items-center pt-1">
+                                        <!-- Año en el hueco verde (junto a la foto) -->
+                                        <span class="text-slate-300 text-[8px] sm:text-[10px] font-mono font-bold">${item.FECHA || 'S/A'}</span>
+                                        <!-- Ciudad en el hueco naranja (a la derecha) -->
+                                        <span class="text-blue-400 text-[8px] sm:text-[10px] font-bold uppercase tracking-wider">${item.CIUDAD || 'LOCALIDAD'}</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="flex justify-between items-center pt-1 pb-0.5">
-                                <span class="text-slate-300 text-[8px] sm:text-[10px] font-mono font-bold">${item.FECHA || 'S/A'}</span>
-                                <span class="text-blue-400 text-[8px] sm:text-[10px] font-bold uppercase">${item.CIUDAD || 'LOCALIDAD'}</span>
-                            </div>
-                            <div class="space-y-0.5 text-[9px] sm:text-[11px] border-t border-slate-800 pt-1">
+
+                            <!-- Bloque inferior de datos -->
+                            <div class="space-y-0.5 text-[9px] sm:text-[11px] pt-0.5">
                                 <div class="bg-slate-950/80 px-1.5 py-0.5 rounded border border-slate-800/80 flex justify-between">
                                     <span class="text-slate-400">DNI:</span><span class="text-slate-100 font-mono font-semibold">${highlightText(item.DNI || '-', query)}</span>
                                 </div>
