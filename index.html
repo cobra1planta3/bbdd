@@ -14,7 +14,6 @@
     <script>
         let allData = [], currentPage = 1, lastScrollPosition = 0;
         const ITEMS_PER_PAGE = 40;
-
         const el = (id) => document.getElementById(id);
 
         function verificarClave() {
@@ -71,6 +70,11 @@
 
         const normalizeText = (text) => text ? text.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase() : "";
 
+        function esMoto(texto) {
+            if (!texto) return false;
+            return /\b(moto|scooter|ciclomotor|quad|triciclo|tmax|t-max|nmax|n-max|xmax|x-max|scoopy|vespa|piaggio|kymco|sym|burgman|pcx|sh125|sh300|z900|z800|z750|mt07|mt09|mt03|gs1200|gs1250|monster|beverly|agility|liberty|zip|typhoon|jog|aerox|neox|sr50|senda|dt125|duke|cbr|r1|r6|ninja|vstrom|varadero|transalp|harley|custom|enduro|cross|ktm|aprilia|derbi|rieju|keeway)\b/i.test(texto);
+        }
+
         function highlightText(text, query) {
             if (!text) return '-';
             const str = String(text);
@@ -81,12 +85,34 @@
         }
 
         function formatAddress(addr, query) {
-            if (!addr) return '<span class="text-slate-500 italic">Sin domicilio</span>';
+            if (!addr) return '';
             const coordRegex = /(-?\d{1,2}\.\d+),\s*(-?\s*\d{1,3}\.\d+)/g;
             if (coordRegex.test(addr)) {
                 return addr.replace(coordRegex, (m, lat, lon) => `<a href="https://www.google.com/maps/search/?api=1&query=${lat.trim()},${lon.trim()}" target="_blank" class="text-blue-400 hover:underline font-mono font-bold bg-blue-500/10 px-1 py-0.5 rounded border border-blue-500/20" onclick="event.stopPropagation();">📍 ${m}</a>`);
             }
             return highlightText(addr, query);
+        }
+
+        function renderVehicles(plates, query = '', isDetail = false) {
+            if (!plates.length) return '<span class="text-slate-500 italic text-[9px]">Ninguno</span>';
+            return plates.map(p => {
+                const icon = esMoto(p) ? '🛵' : '🚗';
+                const content = query ? highlightText(p, query) : p;
+                if (isDetail) {
+                    return `<div class="bg-slate-950 px-2 py-0.5 rounded border border-slate-800 font-mono text-blue-300 text-xs"><span>${icon}</span> ${content}</div>`;
+                }
+                return `<span class="bg-slate-900 px-1.5 rounded border border-slate-700 text-[8px] sm:text-[9px] font-mono text-blue-300"><span>${icon}</span> ${content}</span>`;
+            }).join('');
+        }
+
+        function renderAddresses(item, query = '', isDetail = false) {
+            const addrs = [item.DOMICILIO1, item.DOMICILIO2, item.DOMICILIO3].filter(Boolean);
+            if (!addrs.length) return '<span class="text-slate-500 italic">Sin domicilio</span>';
+            return addrs.map((addr, idx) => {
+                const formatted = query ? formatAddress(addr, query) : formatAddress(addr, '');
+                if (idx === 0) return formatted;
+                return `<div class="${isDetail ? 'text-slate-300 border-t border-slate-800 pt-0.5 mt-0.5' : 'text-slate-300 border-t border-slate-800/60 pt-0.5 mt-0.5'}">${formatted}</div>`;
+            }).join('');
         }
 
         function switchTab(tab) {
@@ -144,7 +170,6 @@
                         <div class="space-y-1 relative z-10">
                             ${hasMote ? `<div class="pb-0.5"><span class="text-amber-400 font-bold text-[9px] sm:text-xs tracking-wide truncate block w-full">${highlightText(item.MOTE, query)}</span></div>` : '<div class="h-1"></div>'}
                             
-                            <!-- Bloque superior con Foto, Nombre, Año (verde) y Localidad (naranja) -->
                             <div class="flex items-center space-x-2 pb-1.5 border-b border-slate-800">
                                 <div class="w-12 h-16 sm:w-20 sm:h-28 bg-slate-950 border border-slate-700/80 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden relative">
                                     <span class="text-blue-400 font-extrabold text-xs sm:text-lg">${getInitials(item.NOMBRE)}</span>
@@ -153,26 +178,23 @@
                                 <div class="min-w-0 flex-1 flex flex-col justify-between self-stretch py-0.5">
                                     <h3 class="text-[9px] sm:text-xs font-semibold text-white group-hover:text-blue-400 line-clamp-2">${highlightText(item.NOMBRE || 'SIN NOMBRE', query)}</h3>
                                     <div class="flex justify-between items-center pt-1">
-                                        <!-- Año en el hueco verde (junto a la foto) -->
                                         <span class="text-slate-300 text-[8px] sm:text-[10px] font-mono font-bold">${item.FECHA || 'S/A'}</span>
-                                        <!-- Ciudad en el hueco naranja (a la derecha) -->
                                         <span class="text-blue-400 text-[8px] sm:text-[10px] font-bold uppercase tracking-wider">${item.CIUDAD || 'LOCALIDAD'}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Bloque inferior de datos -->
                             <div class="space-y-0.5 text-[9px] sm:text-[11px] pt-0.5">
                                 <div class="bg-slate-950/80 px-1.5 py-0.5 rounded border border-slate-800/80 flex justify-between">
                                     <span class="text-slate-400">DNI:</span><span class="text-slate-100 font-mono font-semibold">${highlightText(item.DNI || '-', query)}</span>
                                 </div>
-                                <div class="bg-slate-950/80 px-1.5 py-0.5 rounded border border-slate-800/80">
+                                <div class="bg-slate-950/80 px-1.5 py-0.5 rounded border border-slate-800/80 space-y-0.5">
                                     <span class="text-slate-400 block text-[8px]">DOMICILIO:</span>
-                                    <div class="text-slate-200 truncate">${formatAddress(item.DOMICILIO1, query)}</div>
+                                    <div class="text-slate-200">${renderAddresses(item, query, false)}</div>
                                 </div>
                                 <div class="bg-slate-950/80 px-1.5 py-0.5 rounded border border-slate-800/80">
                                     <span class="text-slate-400 block text-[8px]">VEHÍCULOS:</span>
-                                    <div class="flex flex-wrap gap-1">${plates.length ? plates.map(p => `<span class="bg-slate-900 px-1.5 rounded border border-slate-700 text-[8px] font-mono text-blue-300">🚗 ${highlightText(p, query)}</span>`).join('') : '<span class="text-slate-500 italic">Ninguno</span>'}</div>
+                                    <div class="flex flex-wrap gap-1">${renderVehicles(plates, query, false)}</div>
                                 </div>
                                 ${hasObs ? `<div class="text-[9px] truncate ${isMuerto ? 'text-red-400 font-bold' : 'text-amber-200'}"><strong>Obs:</strong> ${highlightText(item.OBSERVACIONES.replace(/muerto/gi, 'FALLECIDO'), query)}</div>` : ''}
                             </div>
@@ -241,14 +263,12 @@
                             <span class="text-slate-400">DNI / NIE:</span><span class="text-slate-100 font-mono font-bold">${item.DNI || 'No registrado'}</span>
                         </div>
                         <div class="bg-slate-950/80 px-2.5 py-1.5 rounded-lg border border-slate-800 space-y-0.5">
-                            <span class="text-slate-400 block text-[10px] font-bold uppercase">Domicilio:</span>
-                            <div class="text-slate-200">${formatAddress(item.DOMICILIO1, '')}</div>
-                            ${item.DOMICILIO2 ? `<div class="text-slate-300 border-t border-slate-800 pt-0.5 mt-0.5">${formatAddress(item.DOMICILIO2, '')}</div>` : ''}
-                            ${item.DOMICILIO3 ? `<div class="text-slate-300 border-t border-slate-800 pt-0.5 mt-0.5">${formatAddress(item.DOMICILIO3, '')}</div>` : ''}
+                            <span class="text-slate-400 block text-[10px] font-bold uppercase">Domicilios:</span>
+                            <div class="text-slate-200">${renderAddresses(item, '', true)}</div>
                         </div>
                         <div class="bg-slate-950/80 px-2.5 py-1.5 rounded-lg border border-slate-800 space-y-1">
                             <span class="text-slate-400 block text-[10px] font-bold uppercase">Vehículos:</span>
-                            <div class="flex flex-wrap gap-1">${plates.length ? plates.map(p => `<div class="bg-slate-950 px-2 py-0.5 rounded border border-slate-800 font-mono text-blue-300 text-xs">🚗 ${p}</div>`).join('') : '<span class="text-slate-500 italic">Ninguno</span>'}</div>
+                            <div class="flex flex-wrap gap-1">${renderVehicles(plates, '', true)}</div>
                         </div>
                         ${hasObs ? `<div class="bg-slate-950/80 px-2.5 py-1.5 rounded-lg border border-slate-800 text-xs ${isMuerto ? 'border-red-500/40 bg-red-950/10' : ''}"><strong class="${isMuerto ? 'text-red-400' : 'text-amber-400'} block text-[10px] uppercase">Observaciones:</strong><span class="${isMuerto ? 'text-red-300 font-semibold' : 'text-slate-300'}">${item.OBSERVACIONES}</span></div>` : ''}
                     </div>
@@ -259,7 +279,6 @@
 </head>
 <body class="h-full bg-slate-950 text-slate-100 flex flex-col font-sans antialiased selection:bg-blue-600 selection:text-white">
 
-    <!-- Pantalla de Acceso -->
     <div id="authScreen" style="display: flex;" class="fixed inset-0 z-50 bg-slate-950 items-center justify-center p-4 overflow-y-auto">
         <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6 text-center my-auto">
             <div class="inline-flex bg-blue-600/10 p-4 rounded-2xl text-blue-500 border border-blue-500/25">
@@ -277,7 +296,6 @@
         </div>
     </div>
 
-    <!-- Aplicación Principal -->
     <div id="mainApp" style="display: none;" class="h-full flex-col">
         <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-30 shadow-md">
             <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
